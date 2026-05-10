@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Prompt | Ad Intelligence</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-main: #0B0F19;
+            --bg-card: #151E2F;
+            --bg-input: #0B0F19;
+            --border-color: #2A3441;
+            --border-hover: #4B5563;
+            --text-primary: #F8FAFC;
+            --text-secondary: #94A3B8;
+            --accent-primary: #6366F1;
+            --accent-hover: #8B5CF6;
+            --success: #10B981;
+            --danger: #EF4444;
+            --warning: #F59E0B;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        body { background: var(--bg-main); color: var(--text-primary); min-height: 100vh; overflow-x: hidden; }
+
+        /* Navbar */
+        .navbar {
+            position: sticky; top: 0; z-index: 100;
+            background: rgba(11, 15, 25, 0.8);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border-color);
+            padding: 16px 32px;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .navbar h1 { font-size: 1.4em; font-weight: 700; display: flex; align-items: center; gap: 8px; cursor: pointer; }
+        .navbar h1 span {
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-hover));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .nav-links { display: flex; gap: 24px; align-items: center; }
+        .nav-link { color: var(--text-secondary); text-decoration: none; font-weight: 500; font-size: 0.9em; transition: color 0.2s; }
+        .nav-link:hover, .nav-link.active { color: var(--text-primary); }
+
+        .container { max-width: 1200px; margin: 0 auto; padding: 32px; }
+
+        /* Header */
+        .page-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 32px; }
+        .page-title h2 { font-size: 1.8em; font-weight: 700; margin-bottom: 8px; }
+        .page-title p { color: var(--text-secondary); font-size: 0.95em; }
+
+        /* Editor Card */
+        .card { 
+            background: var(--bg-card); 
+            border: 1px solid var(--border-color); 
+            border-radius: 16px; 
+            padding: 24px; 
+            box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5);
+        }
+        
+        .editor-container {
+            position: relative;
+            margin-top: 16px;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+
+        .prompt-textarea {
+            width: 100%;
+            height: 600px;
+            background: var(--bg-input);
+            color: #E2E8F0;
+            padding: 24px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            border: none;
+            outline: none;
+            resize: vertical;
+            white-space: pre-wrap;
+        }
+
+        .editor-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 24px;
+            padding-top: 24px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .btn-save {
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-hover));
+            color: white;
+            border: none;
+            padding: 12px 32px;
+            border-radius: 10px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .btn-save:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px -6px rgba(99, 102, 241, 0.5);
+        }
+        .btn-save:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: var(--bg-input);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-secondary:hover {
+            border-color: var(--text-primary);
+            color: var(--text-primary);
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: var(--bg-card);
+            border-left: 4px solid var(--accent-primary);
+            padding: 16px 24px;
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            z-index: 10000;
+            display: none;
+            animation: slideIn 0.3s ease-out;
+            font-weight: 600;
+        }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        .spinner {
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255,255,255,0.1);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .status-info {
+            font-size: 0.85em;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar">
+        <h1 onclick="window.location='/'"><span>✦</span> Ad Intelligence</h1>
+        <div class="nav-links">
+            <a href="/" class="nav-link">Dashboard</a>
+            <a href="/automation" class="nav-link">Automation</a>
+            <a href="/system_prompt" class="nav-link active">System Prompt</a>
+        </div>
+    </nav>
+
+    <main class="container">
+        
+        <div class="page-header">
+            <div class="page-title">
+                <h2>AI System Prompt</h2>
+                <p>Configure the "brain" behind the product analysis. Changes are applied instantly.</p>
+            </div>
+            <div class="status-info" id="lastUpdated">
+                <!-- Injected via JS -->
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="editor-container">
+                <textarea id="promptEditor" class="prompt-textarea" placeholder="Paste your system prompt here..." spellcheck="false"></textarea>
+            </div>
+
+            <div class="editor-footer">
+                <button class="btn-secondary" onclick="resetToHardcoded()">Reset to Default</button>
+                <button class="btn-save" id="saveBtn" onclick="savePrompt()">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                    Save System Prompt
+                </button>
+            </div>
+        </div>
+
+    </main>
+
+    <div id="toast" class="toast"></div>
+
+    <script>
+        const editor = document.getElementById('promptEditor');
+        const saveBtn = document.getElementById('saveBtn');
+        let originalPrompt = "";
+
+        async function loadPrompt() {
+            try {
+                const resp = await fetch('/api/system_prompt');
+                const data = await resp.json();
+                editor.value = data.system_prompt;
+                originalPrompt = data.system_prompt;
+                
+                // Set initial status
+                document.getElementById('lastUpdated').innerHTML = `
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                    Synced with database
+                `;
+            } catch (e) {
+                showToast("Error loading prompt");
+            }
+        }
+
+        async function savePrompt() {
+            const newPrompt = editor.value;
+            if (!newPrompt.trim()) {
+                showToast("Prompt cannot be empty");
+                return;
+            }
+
+            const originalText = saveBtn.innerHTML;
+            saveBtn.innerHTML = '<div class="spinner"></div> Saving...';
+            saveBtn.disabled = true;
+
+            try {
+                const resp = await fetch('/api/system_prompt', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ system_prompt: newPrompt })
+                });
+                const result = await resp.json();
+                if (result.success) {
+                    showToast("System prompt updated successfully!");
+                    originalPrompt = newPrompt;
+                    document.getElementById('lastUpdated').innerHTML = `
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                        Last saved: ${new Date().toLocaleTimeString()}
+                    `;
+                } else {
+                    showToast("Error: " + (result.error || "Unknown error"));
+                }
+            } catch (e) {
+                showToast("Connection error");
+            } finally {
+                saveBtn.innerHTML = originalText;
+                saveBtn.disabled = false;
+            }
+        }
+
+        function resetToHardcoded() {
+            if (confirm("This will overwrite your current draft. Continue?")) {
+                loadPrompt();
+            }
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.style.display = 'block';
+            setTimeout(() => { toast.style.display = 'none'; }, 3000);
+        }
+
+        // Handle unsaved changes warning
+        window.onbeforeunload = function() {
+            if (editor.value !== originalPrompt) {
+                return "You have unsaved changes. Are you sure you want to leave?";
+            }
+        };
+
+        window.onload = loadPrompt;
+    </script>
+</body>
+</html>

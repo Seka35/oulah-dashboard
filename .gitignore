@@ -1,0 +1,43 @@
+# Claude Code
+.claude/
+
+# Environment
+.env
+.env.local
+access
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Database
+*.db
+*.sql
+!migrations/*.sql
+
+# Logs
+*.log
+nohup.out
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local media (download on demand)
+static/media/
+
+# Backups
+backup_*/
+backups/
+*.zip
+
+# Confidential files
+access
+*.pem
+*.key

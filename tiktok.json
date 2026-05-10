@@ -1,0 +1,1452 @@
+[
+    {
+        "AD ID": "1864616506224866",
+        "Advertiser Name": "Seneca Learning",
+        "AD Preview": "https://p19-common-sign.tiktokcdn.com/tos-no1a-p-0037-no/oYQjGITA0rRfhH47GLQav9LHmZHDgAeTIoIeFl~tplv-noop.image?dr=18692&refresh_token=930c7ee1&x-expires=1778349342&x-signature=BEcEsQ2BggUL9B7NBWzbRjUrvgI%3D&t=9276707c&ps=14f1eb3e&shp=9e36835a&shcp=0c75dd76&idc=sg1&VideoID=v24044gl0000d7tq1gvog65kvom0qnu0",
+        "Ad Dates": [
+            {
+                "FirstShown": "2026-05-09",
+                "FirstShownTimestamp": 1778326002
+            },
+            {
+                "LastShown": "2026-05-09",
+                "LastShownTimestamp": 1778326002
+            }
+        ],
+        "Ad Audience": "0-1K",
+        "Ad Details": [
+            {
+                "Estimated Audience": "0-1K"
+            },
+            {
+                "Spent": ""
+            },
+            {
+                "Type": "2"
+            },
+            {
+                "Audit Status": "1"
+            },
+            {
+                "Impression": ""
+            },
+            {
+                "Sponsor": "Seneca Learning"
+            },
+            {
+                "Target Audience Size": "25.0M-30.5M"
+            }
+        ],
+        "Ad Media": [
+            "Video 1: https://library.tiktok.com/api/v1/cdn/1778327734/video/aHR0cHM6Ly92NTgudGlrdG9rY2RuLmNvbS92aWRlby90b3Mvbm8xYS90b3Mtbm8xYS12ZS0wMDY4YzAwMS1uby9vWVg3RGZERVhpandHRXZJNERGVEFvbkRBOEkyOUxMbGY2ZUlOcC8=/86c82985-2bbd-44f1-9802-d8edd54698ed?VExpiration=1778349342&VSignature=JJZHssjQ7IoiE7IL2hPAog&a=475769&bt=428&btag=e000b0000&bti=PDU2NmYwMy86&ft=.NpOcInz7ThJWixPXq8Zmo&l=20260509195533D8EE45272BDD6758A573&mime_type=video_mp4&rc=PGVoaDNnZzk4OTdmN2k7OEBpM3Ezcm45cmp0OjMzbzczNUAtLTUzYTRgNl4xMS1fMmBeYSNybmpzMmRzLnFhLS1kMTFzcw%3D%3D&signature=nHa0ZFrkAXZY77XnLHOv68R%2BvmJd%2FIwQ3et8s6ZOKjk%3D&vvpl=1"
+        ],
+        "Ad Targeting": {
+            "regions": [
+                {
+                    "region": "GB",
+                    "impressions": "0-1K"
+                }
+            ],
+            "age": [
+                {
+                    "region": "GB",
+                    "13-17": false,
+                    "18-24": true,
+                    "25-34": true,
+                    "35-44": true,
+                    "45-54": true,
+                    "55+": true
+                }
+            ],
+            "gender": [
+                {
+                    "region": "GB",
+                    "female": true,
+                    "male": true,
+                    "unknown": true
+                }
+            ]
+        },
+        "Ad Sponsor": "Seneca Learning",
+        "Ad Target Audience Size": "25.0M-30.5M",
+        "Ad Detail URL": "https://library.tiktok.com/ads/detail/?ad_id=1864616506224866"
+    },
+    {
+        "AD ID": "1864616506234290",
+        "Advertiser Name": "Seneca Learning",
+        "AD Preview": "https://p16-common-sign.tiktokcdn.com/tos-no1a-p-0037-no/ooALtX75E9BoMIfpj8BDpYIDAIQeLfLAaTCTBJ~tplv-noop.image?dr=18692&refresh_token=876d5711&x-expires=1778349342&x-signature=IeCdnULZ6Jobblnlyy5RWZtaQHs%3D&t=9276707c&ps=14f1eb3e&shp=9e36835a&shcp=0c75dd76&idc=sg1&VideoID=v24044gl0000d7tkh77og65oc219ur8g",
+        "Ad Dates": [
+            {
+                "FirstShown": "2026-05-09",
+                "FirstShownTimestamp": 1778326002
+            },
+            {
+                "LastShown": "2026-05-09",
+                "LastShownTimestamp": 1778326002
+            }
+        ],
+        "Ad Audience": "0-1K",
+        "Ad Details": [
+            {
+                "Estimated Audience": "0-1K"
+            },
+            {
+                "Spent": ""
+            },
+            {
+                "Type": "2"
+            },
+            {
+                "Audit Status": "1"
+            },
+            {
+                "Impression": ""
+            },
+            {
+                "Sponsor": "Seneca Learning"
+            },
+            {
+                "Target Audience Size": "25.0M-30.5M"
+            }
+        ],
+        "Ad Media": [
+            "Video 1: https://library.tiktok.com/api/v1/cdn/1778327734/video/aHR0cHM6Ly92NTgudGlrdG9rY2RuLmNvbS92aWRlby90b3Mvbm8xYS90b3Mtbm8xYS12ZS0wMDY4LW5vL284d1RRdmlVdUE5d0RqSk9BSUZSZVNJRGNmUWJmSzBFTElEMzdFLw==/3ec8d10a-2766-40b3-bf81-733026256a03?VExpiration=1778349342&VSignature=JQn7YHyj05Gv4nNJrhi5pg&a=475769&bt=230&btag=e000b0000&bti=PDU2NmYwMy86&ft=.NpOcInz7ThJWixPXq8Zmo&l=20260509195533D8EE45272BDD6758A573&mime_type=video_mp4&rc=aTQ3N2c0Ozc1ZjM2Mzs5OkBpanU8NXI5cjpuOjMzbzczNUA1NjNjMV8xNS0xYy8yLmFfYSM1ci5gMmQ0ZXFhLS1kMTFzcw%3D%3D&signature=WVVeat7cP2QeiiqC%2FQoHsXMm7i9o42SRn26B%2BiVDViM%3D&vvpl=1"
+        ],
+        "Ad Targeting": {
+            "regions": [
+                {
+                    "region": "GB",
+                    "impressions": "0-1K"
+                }
+            ],
+            "age": [
+                {
+                    "region": "GB",
+                    "13-17": false,
+                    "18-24": true,
+                    "25-34": true,
+                    "35-44": true,
+                    "45-54": true,
+                    "55+": true
+                }
+            ],
+            "gender": [
+                {
+                    "region": "GB",
+                    "female": true,
+                    "male": true,
+                    "unknown": true
+                }
+            ]
+        },
+        "Ad Sponsor": "Seneca Learning",
+        "Ad Target Audience Size": "25.0M-30.5M",
+        "Ad Detail URL": "https://library.tiktok.com/ads/detail/?ad_id=1864616506234290"
+    },
+    {
+        "AD ID": "1864616547474562",
+        "Advertiser Name": "Seneca Learning",
+        "AD Preview": "https://p16-common-sign.tiktokcdn.com/tos-no1a-p-0037-no/oUIfQIBeFmTIV6IjxL9TqALmWtoGe3ALAjDw6D~tplv-noop.image?dr=18692&refresh_token=0811123e&x-expires=1778349337&x-signature=7PMCawyO0%2FYLIzmpVT53VNljUNA%3D&t=9276707c&ps=14f1eb3e&shp=9e36835a&shcp=0c75dd76&idc=sg1&VideoID=v24044gl0000d7t2pm7og65gtbpb39lg",
+        "Ad Dates": [
+            {
+                "FirstShown": "2026-05-09",
+                "FirstShownTimestamp": 1778326002
+            },
+            {
+                "LastShown": "2026-05-09",
+                "LastShownTimestamp": 1778326002
+            }
+        ],
+        "Ad Audience": "0-1K",
+        "Ad Details": [
+            {
+                "Estimated Audience": "0-1K"
+            },
+            {
+                "Spent": ""
+            },
+            {
+                "Type": "2"
+            },
+            {
+                "Audit Status": "1"
+            },
+            {
+                "Impression": ""
+            },
+            {
+                "Sponsor": "Seneca Learning"
+            },
+            {
+                "Target Audience Size": "25.0M-30.5M"
+            }
+        ],
+        "Ad Media": [
+            "Video 1: https://library.tiktok.com/api/v1/cdn/1778327734/video/aHR0cHM6Ly92NTgudGlrdG9rY2RuLmNvbS92aWRlby90b3Mvbm8xYS90b3Mtbm8xYS12ZS0wMDY4YzAwMS1uby9vMHNmQlB3MkNpeXlFbkxwNkUwd2lBdjZJTElvQVZ4cnZDRnNLcy8=/532b5a00-16ed-40d5-a612-45dbaff0faca?VExpiration=1778349337&VSignature=fyqaBm8Um3iCuqBaOIuvEQ&a=475769&bt=620&btag=e000b0000&bti=PDU2NmYwMy86&ft=.NpOcInz7ThJWixPXq8Zmo&l=20260509195533D8EE45272BDD6758A573&mime_type=video_mp4&rc=MzRnN2g4NTk7NDs3NDQ7aUBpajxlZWo5cnA1OjMzbzczNUBeNGEyNWBfXmIxLjA2MzRgYSNpMG1xMmQ0bXFhLS1kMTFzcw%3D%3D&signature=Hg115NZtN4n9XwYFJGDqR%2BgGh0bYKedrYgwoB3r1r14%3D&vvpl=1"
+        ],
+        "Ad Targeting": {
+            "regions": [
+                {
+                    "region": "GB",
+                    "impressions": "0-1K"
+                }
+            ],
+            "age": [
+                {
+                    "region": "GB",
+                    "13-17": false,
+                    "18-24": true,
+                    "25-34": true,
+                    "35-44": true,
+                    "45-54": true,
+                    "55+": true
+                }
+            ],
+            "gender": [
+                {
+                    "region": "GB",
+                    "female": true,
+                    "male": true,
+                    "unknown": true
+                }
+            ]
+        },
+        "Ad Sponsor": "Seneca Learning",
+        "Ad Target Audience Size": "25.0M-30.5M",
+        "Ad Detail URL": "https://library.tiktok.com/ads/detail/?ad_id=1864616547474562"
+    },
+    {
+        "AD ID": "1864616547484882",
+        "Advertiser Name": "Seneca Learning",
+        "AD Preview": "https://p16-common-sign.tiktokcdn.com/tos-no1a-p-0037-no/o4D0GIvOQDj9NQEfDfjEIjmLUe5qAAYqF8A7FT~tplv-noop.image?dr=18692&refresh_token=60a575a7&x-expires=1778349342&x-signature=PwU1ZJQMt9INaQY2cKiQ43OjrF4%3D&t=9276707c&ps=14f1eb3e&shp=9e36835a&shcp=0c75dd76&idc=sg1&VideoID=v24044gl0000d7t0f3nog65jf58r3cag",
+        "Ad Dates": [
+            {
+                "FirstShown": "2026-05-09",
+                "FirstShownTimestamp": 1778326002
+            },
+            {
+                "LastShown": "2026-05-09",
+                "LastShownTimestamp": 1778326002
+            }
+        ],
+        "Ad Audience": "0-1K",
+        "Ad Details": [
+            {
+                "Estimated Audience": "0-1K"
+            },
+            {
+                "Spent": ""
+            },
+            {
+                "Type": "2"
+            },
+            {
+                "Audit Status": "1"
+            },
+            {
+                "Impression": ""
+            },
+            {
+                "Sponsor": "Seneca Learning"
+            },
+            {
+                "Target Audience Size": "25.0M-30.5M"
+            }
+        ],
+        "Ad Media": [
+            "Video 1: https://library.tiktok.com/api/v1/cdn/1778327734/video/aHR0cHM6Ly92NTgudGlrdG9rY2RuLmNvbS92aWRlby90b3Mvbm8xYS90b3Mtbm8xYS12ZS0wMDY4YzAwMS1uby9vb0M2alRhZTlEVkVJQ1RMTEFFYnNtZWZPR0VBRkZJREt4SURWQS8=/dfcd3a60-cc8e-4611-9f78-a8023ac6abf1?VExpiration=1778349342&VSignature=TChPIauUB3QmPkgv89YCng&a=475769&bt=618&btag=e000b0000&bti=PDU2NmYwMy86&ft=.NpOcInz7ThJWixPXq8Zmo&l=20260509195533D8EE45272BDD6758A573&mime_type=video_mp4&rc=ZDlkOjU2ZTs2Zjo7Zzw6O0BpamZ1OG05cjYzOjMzbzczNUAxMTUyLzVfXjYxLjIzMi8vYSNeMDVjMmRrY3FhLS1kMTFzcw%3D%3D&signature=SxokZQJWFCtDkP62O6sRa2nOcA%2BAU1hMlVlrWNYEFwg%3D&vvpl=1"
+        ],
+        "Ad Targeting": {
+            "regions": [
+                {
+                    "region": "GB",
+                    "impressions": "0-1K"
+                }
+            ],
+            "age": [
+                {
+                    "region": "GB",
+                    "13-17": false,
+                    "18-24": true,
+                    "25-34": true,
+                    "35-44": true,
+                    "45-54": true,
+                    "55+": true
+                }
+            ],
+            "gender": [
+                {
+                    "region": "GB",
+                    "female": true,
+                    "male": true,
+                    "unknown": true
+                }
+            ]
+        },
+        "Ad Sponsor": "Seneca Learning",
+        "Ad Target Audience Size": "25.0M-30.5M",
+        "Ad Detail URL": "https://library.tiktok.com/ads/detail/?ad_id=1864616547484882"
+    },
+    {
+        "AD ID": "1864616547491234",
+        "Advertiser Name": "Seneca Learning",
+        "AD Preview": "https://p16-common-sign.tiktokcdn.com/tos-no1a-p-0037-no/oYPDPAB9y7TCxiK3z9zFvByBwEtvAUZIlS6fi7~tplv-noop.image?dr=18692&refresh_token=371e8503&x-expires=1778349341&x-signature=vp0aTl8FEXSVbnozuB2gZExX46Q%3D&t=9276707c&ps=14f1eb3e&shp=9e36835a&shcp=0c75dd76&idc=sg1&VideoID=v24025gl0000cvnuu57og65qul6vnjp0",
+        "Ad Dates": [
+            {
+                "FirstShown": "2026-05-09",
+                "FirstShownTimestamp": 1778326002
+            },
+            {
+                "LastShown": "2026-05-09",
+                "LastShownTimestamp": 1778326002
+            }
+        ],
+        "Ad Audience": "0-1K",
+        "Ad Details": [
+            {
+                "Estimated Audience": "0-1K"
+            },
+            {
+                "Spent": ""
+            },
+            {
+                "Type": "2"
+            },
+            {
+                "Audit Status": "1"
+            },
+            {
+                "Impression": ""
+            },
+            {
+                "Sponsor": "Seneca Learning"
+            },
+            {
+                "Target Audience Size": "25.0M-30.5M"
+            }
+        ],
+        "Ad Media": [
+            "Video 1: https://library.tiktok.com/api/v1/cdn/1778327734/video/aHR0cHM6Ly92NTgudGlrdG9rY2RuLmNvbS92aWRlby90b3Mvbm8xYS90b3Mtbm8xYS12ZS0wMDY4LW5vL29jUEl5RTdGd0F2REM5NnpLaVBVZnpCQVZ1OWp5aUI3OEgzRkV2Lw==/ba0cf5b0-6b17-464a-a571-87bd097dc33d?VExpiration=1778349341&VSignature=HxBgOd_F50YcKVAUCX0i4g&a=475769&bt=328&btag=e000b0000&bti=PDU2NmYwMy86&ft=.NpOcInz7ThJWixPXq8Zmo&l=20260509195533D8EE45272BDD6758A573&mime_type=video_mp4&rc=aDUzO2RpOzxnPDc3aGg5Z0BpM215b3Q5cjh4eTMzbzgzNUBeMGA1My1gXmMxMjYvNTUzYSNtazNyMmQ0cmtgLS1kLzFzcw%3D%3D&signature=0Mi%2FeR1NFaHFtoIATyKszVCnUPOrFifecMvT7z7F6ag%3D&vvpl=1"
+        ],
+        "Ad Targeting": {
+            "regions": [
+                {
+                    "region": "GB",
+                    "impressions": "0-1K"
+                }
+            ],
+            "age": [
+                {
+                    "region": "GB",
+                    "13-17": false,
+                    "18-24": true,
+                    "25-34": true,
+                    "35-44": true,
+                    "45-54": true,
+                    "55+": true
+                }
+            ],
+            "gender": [
+                {
+                    "region": "GB",
+                    "female": true,
+                    "male": true,
+                    "unknown": true
+                }
+            ]
+        },
+        "Ad Sponsor": "Seneca Learning",
+        "Ad Target Audience Size": "25.0M-30.5M",
+        "Ad Detail URL": "https://library.tiktok.com/ads/detail/?ad_id=1864616547491234"
+    },
+    {
+        "AD ID": "1864559551573041",
+        "Advertiser Name": "LEARNING MANAGEMENT DEVELOPPEMENT",
+        "AD Preview": "https://p16-common-sign.tiktokcdn.com/tos-no1a-p-68c710-no/bd5b7841131b4a408532ca446c9795b8_1719496250~tplv-noop.image?dr=18692&refresh_token=630bce63&x-expires=1778349366&x-signature=pxAnHq5Ki1qX9TSMS16itLCrh1Y%3D&t=9276707c&ps=14f1eb3e&shp=9e36835a&shcp=0c75dd76&idc=sg1&VideoID=v0f044gc0000cpumqh7og65s7cers4kg",
+        "Ad Dates": [
+            {
+                "FirstShown": "2026-05-07",
+                "FirstShownTimestamp": 1778112000
+            },
+            {
+                "LastShown": "2026-05-08",
+                "LastShownTimestamp": 1778198400
+            }
+        ],
+        "Ad Audience": "0-1K",
+        "Ad Details": [
+            {
+                "Estimated Audience": "0-1K"
+            },
+            {
+                "Spent": ""
+            },
+            {
+                "Type": "2"
+            },
+            {
+                "Audit Status": "1"
+            },
+            {
+                "Impression": ""
+            },
+            {
+                "Sponsor": "LEARNING MANAGEMENT DEVELOPPEMENT"
+            },
+            {
+                "Target Audience Size": "5.0M-6.1M"
+            }
+        ],
+        "Ad Media": [
+            "Video 1: https://library.tiktok.com/api/v1/cdn/1778327734/video/aHR0cHM6Ly92NTgudGlrdG9rY2RuLmNvbS92aWRlby90b3Mvbm8xYS90b3Mtbm8xYS12ZS02OGM3MTAtbm8vb2tJdGVFUWdlNEFGU0VXM2pvako0ZmZqdDFEd0dFSkk4Z0xNZDYv/08c0e38a-9787-47b0-873e-03ad89c51d3d?VExpiration=1778349366&VSignature=D1ZDrGs9BvwJfyqd4rrF-w&a=475769&bt=1230&btag=e00088000&bti=PDU2NmYwMy86&ft=.NpOcInz7ThJWixPXq8Zmo&l=20260509195533D8EE45272BDD6758A573&mime_type=video_mp4&rc=NzY1OTNmZjk4PGdpZzg5N0Bpajd1ZnY5cmtwczMzZjczM0AuX2AvYWMyXy4xLzNhYDYtYSNocGI0MmQ0bnJgLS1kMWNzcw%3D%3D&signature=%2F%2Fca7wodV%2F%2BxxqDNbn7ewQSgbtlD2SPCOo7VJTY4Rso%3D&vvpl=1"
+        ],
+        "Ad Targeting": {
+            "regions": [
+                {
+                    "region": "FR",
+                    "impressions": "0-1K"
+                }
+            ],
+            "age": [
+                {
+                    "region": "FR",
+                    "13-17": false,
+                    "18-24": true,
+                    "25-34": false,
+                    "35-44": false,
+                    "45-54": false,
+                    "55+": false
+                }
+            ],
+            "gender": [
+                {
+                    "region": "FR",
+                    "female": true,
+                    "male": true,
+                    "unknown": true
+                }
+            ]
+        },
+        "Ad Sponsor": "LEARNING MANAGEMENT DEVELOPPEMENT",
+        "Ad Target Audience Size": "5.0M-6.1M",
+        "Ad Detail URL": "https://library.tiktok.com/ads/detail/?ad_id=1864559551573041"
+    },
+    {
+        "AD ID": "1864470147221538",
+        "Advertiser Name": "LEARNING MANAGEMENT DEVELOPPEMENT",
+        "AD Preview": "https://p16-sign-sg.tiktokcdn.com/tos-alisg-p-0051c001-sg/oMNbCfz8DBApFmxDF6E0tlI4OBQI4wfgglNJOA~tplv-tiktokx-origin.jpeg?dr=14582&refresh_token=9831defd&x-expires=1778346000&x-signature=EYhohFkmywJlO41KeuAjG9Dr4ng%3D&t=4d5b0474&ps=13740610&shp=0c75dd76&shcp=9b759fb9&idc=sg1",
+        "Ad Dates": [
+            {
+                "FirstShown": "2026-05-06",
+                "FirstShownTimestamp": 1778025600
+            },
+            {
+                "LastShown": "2026-05-08",
+                "LastShownTimestamp": 1778198400
+            }
+        ],
+        "Ad Audience": "0-1K",
+        "Ad Details": [
+            {
+                "Estimated Audience": "0-1K"
+            },
+            {
+                "Spent": ""
+            },
+            {
+                "Type": "2"
+            },
+            {
+                "Audit Status": "1"
+            },
+            {
+                "Impression": ""
+            },
+            {
+                "Sponsor": "LEARNING MANAGEMENT DEVELOPPEMENT"
+            },
+            {
+                "Target Audience Size": "5.0M-6.1M"
+            }
+        ],
+        "Ad Media": [
+            "Video 1: https://library.tiktok.com/api/v1/cdn/1778327734/video/aHR0cHM6Ly92NTgudGlrdG9rY2RuLmNvbS92aWRlby90b3Mvbm8xYS90b3Mtbm8xYS12ZS01MWM3MTAtbm8vbzBMYXhmQWZqSUR2eEY1U0FnZ09JcFExZWNHcG5DRGduR0JiZEwv/49d90138-b712-4113-a813-7a0f72263862?VExpiration=1778349372&VSignature=zYKwXTa8jhMpVIfq9HIkMQ&a=475769&bt=545&btag=e00088000&bti=PDU2NmYwMy86&ft=.NpOcInz7ThJWixPXq8Zmo&l=20260509195533D8EE45272BDD6758A573&mime_type=video_mp4&rc=NTdpOGkzZmU0M2g6ZTc2M0BpMzM5b3g5cnloNzMzODYzNEAtNDEzX2M2NmExLmFgMTUxYSNgNC0zMmRjbXFhLS1kMC1zcw%3D%3D&signature=9KG0kEcCc2INexr%2BTCppHj2BsDbQl31vORyAusTUjfA%3D&vvpl=1",
+            "Image 1: https://p16-sign-sg.tiktokcdn.com/tos-alisg-p-0051c001-sg/oMNbCfz8DBApFmxDF6E0tlI4OBQI4wfgglNJOA~tplv-tiktokx-origin.jpeg?dr=14582&refresh_token=9831defd&x-expires=1778346000&x-signature=EYhohFkmywJlO41KeuAjG9Dr4ng%3D&t=4d5b0474&ps=13740610&shp=0c75dd76&shcp=9b759fb9&idc=sg1"
+        ],
+        "Ad Targeting": {
+            "regions": [
+                {
+                    "region": "FR",
+                    "impressions": "0-1K"
+                }
+            ],
+            "age": [
+                {
+                    "region": "FR",
+                    "13-17": false,
+                    "18-24": true,
+                    "25-34": false,
+                    "35-44": false,
+                    "45-54": false,
+                    "55+": false
+                }
+            ],
+            "gender": [
+                {
+                    "region": "FR",
+                    "female": true,
+                    "male": true,
+                    "unknown": true
+                }
+            ]
+        },
+        "Ad Sponsor": "LEARNING MANAGEMENT DEVELOPPEMENT",
+        "Ad Target Audience Size": "5.0M-6.1M",
+        "Ad Detail URL": "https://library.tiktok.com/ads/detail/?ad_id=1864470147221538"
+    },
+    {
+        "AD ID": "1864205328933473",
+        "Advertiser Name": "Learning IT",
+        "AD Preview": "https://p16-sign-sg.tiktokcdn.com/tos-alisg-p-0051c001-sg/okfpb9N3DCB9x3Ci5wiHbEJ7BHEAIgByecBQ1A~tplv-tiktokx-origin.jpeg?dr=14582&refresh_token=4cb2a97c&x-expires=1778346000&x-signature=Cjn0jcmdJgAEjiyZjkan2o3Ph6E%3D&t=4d5b0474&ps=13740610&shp=0c75dd76&shcp=9b759fb9&idc=sg1",
+        "Ad Dates": [
+            {
+                "FirstShown": "2026-05-03",
+                "FirstShownTimestamp": 1777766400
+            },
+            {
+                "LastShown": "2026-05-08",
+                "LastShownTimestamp": 1778198400
+            }
+        ],
+        "Ad Audience": "10K-100K",
+        "Ad Details": [
+            {
+                "Estimated Audience": "10K-100K"
+            },
+            {
+                "Spent": ""
+            },
+            {
+                "Type": "2"
+            },
+            {
+                "Audit Status": "1"
+            },
+            {
+                "Impression": ""
+            },
+            {
+                "Sponsor": "Learning IT"
+            },
+            {
+                "Target Audience Size": "11.7M-14.3M"
+            }
+        ],
+        "Ad Media": [
+            "Video 1: https://library.tiktok.com/api/v1/cdn/1778327734/video/aHR0cHM6Ly92NTgudGlrdG9rY2RuLmNvbS92aWRlby90b3MvdXNlYXN0MmEvdG9zLXVzZWFzdDJhLXZlLTAwNTFjNzk5LWV1dHRwL29ZOUFIQmllOGlCdk4wZ2NIMXE5aUszQmZ5UUlUcEVEd3hJYkFFLw==/acb22c06-3047-4320-8238-c1eb1fe33691?VExpiration=1778349344&VSignature=Ot2fVoJ3-CujnuOEynTu6A&a=475769&bt=427&btag=e000b0000&bti=PDU2NmYwMy86&ft=.NpOcInz7ThJWixPXq8Zmo&l=20260509195533D8EE45272BDD6758A573&mime_type=video_mp4&rc=MzlmZDc6ZjVlODo2aTg0O0BpanRsO2w5cnh2OjMzODYzNEA0NDEuXmFgXzMxMTJgMjBiYSMuZmdzMmRrNW9hLS1kMC1zcw%3D%3D&signature=VVs8uN257rvTTU%2FDBTzAvb2aVEeooQDr1v45J5YwLSE%3D&vvpl=1",
+            "Image 1: https://p16-sign-sg.tiktokcdn.com/tos-alisg-p-0051c001-sg/okfpb9N3DCB9x3Ci5wiHbEJ7BHEAIgByecBQ1A~tplv-tiktokx-origin.jpeg?dr=14582&refresh_token=4cb2a97c&x-expires=1778346000&x-signature=Cjn0jcmdJgAEjiyZjkan2o3Ph6E%3D&t=4d5b0474&ps=13740610&shp=0c75dd76&shcp=9b759fb9&idc=sg1"
+        ],
+        "Ad Targeting": {
+            "regions": [
+                {
+                    "region": "PL",
+                    "impressions": "21K"
+                }
+            ],
+            "age": [
+                {
+                    "region": "PL",
+                    "13-17": false,
+                    "18-24": true,
+                    "25-34": true,
+                    "35-44": true,
+                    "45-54": true,
+                    "55+": true
+                }
+            ],
+            "gender": [
+                {
+                    "region": "PL",
+                    "female": true,
+                    "male": true,
+                    "unknown": true
+                }
+            ]
+        },
+        "Ad Sponsor": "Learning IT",
+        "Ad Target Audience Size": "11.7M-14.3M",
+        "Ad Detail URL": "https://library.tiktok.com/ads/detail/?ad_id=1864205328933473"
+    },
+    {
+        "AD ID": "1864297794358322",
+        "Advertiser Name": "Learning IT",
+        "AD Preview": "https://p16-common-sign.tiktokcdn.com/tos-alisg-p-0051c001-sg/oIefRFrDAtHbhD7uQwGDMF6krdEGeTggACC5IO~tplv-tiktokx-origin.jpeg?dr=14582&refresh_token=442d95d1&x-expires=1778346000&x-signature=kASZunB%2FXGNOZHCldC5TUTjvXLI%3D&t=4d5b0474&ps=13740610&shp=0c75dd76&shcp=9b759fb9&idc=sg1",
+        "Ad Dates": [
+            {
+                "FirstShown": "2026-05-05",
+                "FirstShownTimestamp": 1777939200
+            },
+            {
+                "LastShown": "2026-05-08",
+                "LastShownTimestamp": 1778198400
+            }
+        ],
+        "Ad Audience": "10K-100K",
+        "Ad Details": [
+            {
+                "Estimated Audience": "10K-100K"
+            },
+            {
+                "Spent": ""
+            },
+            {
+                "Type": "2"
+            },
+            {
+                "Audit Status": "1"
+            },
+            {
+                "Impression": ""
+            },
+            {
+                "Sponsor": "Learning IT"
+            },
+            {
+                "Target Audience Size": "7.6M-9.2M"
+            }
+        ],
+        "Ad Media": [
+            "Video 1: https://library.tiktok.com/api/v1/cdn/1778327734/video/aHR0cHM6Ly92NTgudGlrdG9rY2RuLmNvbS92aWRlby90b3MvYWxpc2cvdG9zLWFsaXNnLXZlLTAwNTFjMDAxLXNnL29JbldnZ2dLWkdBYk5kSFNLakwyRGJUY2ZHUEFkQ2U4UUllbHlJLw==/227b76be-af81-449d-85fe-e7af556fc266?VExpiration=1778349341&VSignature=bZSdF1rrHR__GRK7K2PD2g&a=475769&bt=471&btag=e000b0000&bti=PDU2NmYwMy86&ft=.NpOcInz7ThJWixPXq8Zmo&l=20260509195533D8EE45272BDD6758A573&mime_type=video_mp4&rc=ZDxlZ2Y7OzQ7Ozs2aDtnN0BpM3E7PHc5cm1rOjMzODYzNEA2MDIxM2FjNmExMy82X2I0YSNgNG5lMmQ0aXBhLS1kMC1zcw%3D%3D&signature=nRtzAF0SACxyp%2B%2FUZLzHr0xS%2Bt5YB%2F5NP37EngscqEg%3D&vvpl=1",
+            "Image 1: https://p16-common-sign.tiktokcdn.com/tos-alisg-p-0051c001-sg/oIefRFrDAtHbhD7uQwGDMF6krdEGeTggACC5IO~tplv-tiktokx-origin.jpeg?dr=14582&refresh_token=442d95d1&x-expires=1778346000&x-signature=kASZunB%2FXGNOZHCldC5TUTjvXLI%3D&t=4d5b0474&ps=13740610&shp=0c75dd76&shcp=9b759fb9&idc=sg1"
+        ],
+        "Ad Targeting": {
+            "regions": [
+                {
+                    "region": "PL",
+                    "impressions": "18K"
+                }
+            ],
+            "age": [
+                {
+                    "region": "PL",
+                    "13-17": false,
+                    "18-24": true,
+                    "25-34": true,
+                    "35-44": true,
+                    "45-54": true,
+                    "55+": true
+                }
+            ],
+            "gender": [
+                {
+                    "region": "PL",
+                    "female": true,
+                    "male": false,
+                    "unknown": false
+                }
+            ]
+        },
+        "Ad Sponsor": "Learning IT",
+        "Ad Target Audience Size": "7.6M-9.2M",
+        "Ad Detail URL": "https://library.tiktok.com/ads/detail/?ad_id=1864297794358322"
+    },
+    {
+        "AD ID": "1864577201753457",
+        "Advertiser Name": "LEARNING MANAGEMENT DEVELOPPEMENT",
+        "AD Preview": "https://p16-common-sign.tiktokcdn.com/tos-no1a-p-0037-no/oE8zIkItDDAMv5Hp6rF4FVoDRCuguBvPQkfzeE~tplv-noop.image?dr=18692&refresh_token=54e79dd3&x-expires=1778349348&x-signature=LrTS6SL142%2FCZRhG75M6AJi9JV0%3D&t=9276707c&ps=14f1eb3e&shp=9e36835a&shcp=0c75dd76&idc=sg1&VideoID=v24025gl0000d0vbpgvog65sbf69en20",
+        "Ad Dates": [
+            {
+                "FirstShown": "2026-05-08",
+                "FirstShownTimestamp": 1778198400
+            },
+            {
+                "LastShown": "2026-05-08",
+                "LastShownTimestamp": 1778198400
+            }
+        ],
+        "Ad Audience": "0-1K",
+        "Ad Details": [
+            {
+                "Estimated Audience": "0-1K"
+            },
+            {
+                "Spent": ""
+            },
+            {
+                "Type": "2"
+            },
+            {
+                "Audit Status": "1"
+            },
+            {
+                "Impression": ""
+            },
+            {
+                "Sponsor": "LEARNING MANAGEMENT DEVELOPPEMENT"
+            },
+            {
+                "Target Audience Size": "5.0M-6.1M"
+            }
+        ],
+        "Ad Media": [
+            "Video 1: https://library.tiktok.com/api/v1/cdn/1778327734/video/aHR0cHM6Ly92NTgudGlrdG9rY2RuLmNvbS92aWRlby90b3Mvbm8xYS90b3Mtbm8xYS12ZS0wMDY4LW5vL29rcUR6NGdJUUV1a1ZHREZydm9DZURwQlBJaDVrdXNmZ0F0RnhWLw==/7eec96e5-e9be-4704-814d-e08a825ca1f8?VExpiration=1778349348&VSignature=-y1bCYJcj1Cr6vBZFyrvkQ&a=475769&bt=1063&btag=e000b0000&bti=PDU2NmYwMy86&ft=.NpOcInz7ThJWixPXq8Zmo&l=20260509195533D8EE45272BDD6758A573&mime_type=video_mp4&rc=PDw0OzNnN2Y3OTlnZWVkN0BpM3E8aXY5cmplMzMzbzgzNUAyYy9hMWFjXmIxLy41LV4xYSMvYjNfMmRzbXNhLS1kLzFzcw%3D%3D&signature=8pFfFUpKTMZFnbUW7gyWY5keGbdcwu5RVFoYmHmpad4%3D&vvpl=1"
+        ],
+        "Ad Targeting": {
+            "regions": [
+                {
+                    "region": "FR",
+                    "impressions": "0-1K"
+                }
+            ],
+            "age": [
+                {
+                    "region": "FR",
+                    "13-17": false,
+                    "18-24": true,
+                    "25-34": false,
+                    "35-44": false,
+                    "45-54": false,
+                    "55+": false
+                }
+            ],
+            "gender": [
+                {
+                    "region": "FR",
+                    "female": true,
+                    "male": true,
+                    "unknown": true
+                }
+            ]
+        },
+        "Ad Sponsor": "LEARNING MANAGEMENT DEVELOPPEMENT",
+        "Ad Target Audience Size": "5.0M-6.1M",
+        "Ad Detail URL": "https://library.tiktok.com/ads/detail/?ad_id=1864577201753457"
+    },
+    {
+        "AD ID": "1864481455468641",
+        "Advertiser Name": "LEARNING MANAGEMENT DEVELOPPEMENT",
+        "AD Preview": "https://p16-common-sign.tiktokcdn.com/tos-no1a-p-0037-no/ocEwjTREQFAf6QIxQo2gjkaVkBF61fGDPAixox~tplv-noop.image?dr=18692&refresh_token=549bded7&x-expires=1778349350&x-signature=BVK6rmtGI3tQzdQ3HfEUMexxlf0%3D&t=9276707c&ps=14f1eb3e&shp=9e36835a&shcp=0c75dd76&idc=sg1&VideoID=v24044gl0000d0cftcfog65omke6lqp0",
+        "Ad Dates": [
+            {
+                "FirstShown": "2026-05-06",
+                "FirstShownTimestamp": 1778025600
+            },
+            {
+                "LastShown": "2026-05-08",
+                "LastShownTimestamp": 1778198400
+            }
+        ],
+        "Ad Audience": "0-1K",
+        "Ad Details": [
+            {
+                "Estimated Audience": "0-1K"
+            },
+            {
+                "Spent": ""
+            },
+            {
+                "Type": "2"
+            },
+            {
+                "Audit Status": "1"
+            },
+            {
+                "Impression": ""
+            },
+            {
+                "Sponsor": "LEARNING MANAGEMENT DEVELOPPEMENT"
+            },
+            {
+                "Target Audience Size": "5.0M-6.1M"
+            }
+        ],
+        "Ad Media": [
+            "Video 1: https://library.tiktok.com/api/v1/cdn/1778327734/video/aHR0cHM6Ly92NTgudGlrdG9rY2RuLmNvbS92aWRlby90b3Mvbm8xYS90b3Mtbm8xYS12ZS0wMDY4YzAwMS1uby9vUWZSbUlJR0FyS0dHMXJMZVVnR1dBQWlnMWpIMllSZmZqVnhhUS8=/a4b4b888-e34e-4d2c-848c-04d1402f0ea0?VExpiration=1778349350&VSignature=3ztDuvQwCkLdOYa2un2LWA&a=475769&bt=1241&btag=e000b0000&bti=PDU2NmYwMy86&ft=.NpOcInz7ThJWixPXq8Zmo&l=20260509195533D8EE45272BDD6758A573&mime_type=video_mp4&rc=OWU6ZDU7NGg7ZGdmNzo0aEBpM3Q5bnI5cmZpMzMzbzczNUAyY2BhMjQtXi0xLWNiX15gYSNtaWJqMmRjcWBhLS1kMTFzcw%3D%3D&signature=DJdYXqDuOx6ydsHRkqdKH4ddtE4%2F4EKnU5yhbJ3zfxE%3D&vvpl=1"
+        ],
+        "Ad Targeting": {
+            "regions": [
+                {
+                    "region": "FR",
+                    "impressions": "0-1K"
+                }
+            ],
+            "age": [
+                {
+                    "region": "FR",
+                    "13-17": false,
+                    "18-24": true,
+                    "25-34": false,
+                    "35-44": false,
+                    "45-54": false,
+                    "55+": false
+                }
+            ],
+            "gender": [
+                {
+                    "region": "FR",
+                    "female": true,
+                    "male": true,
+                    "unknown": true
+                }
+            ]
+        },
+        "Ad Sponsor": "LEARNING MANAGEMENT DEVELOPPEMENT",
+        "Ad Target Audience Size": "5.0M-6.1M",
+        "Ad Detail URL": "https://library.tiktok.com/ads/detail/?ad_id=1864481455468641"
+    },
+    {
+        "AD ID": "1864481456108673",
+        "Advertiser Name": "LEARNING MANAGEMENT DEVELOPPEMENT",
+        "AD Preview": "https://p16-common-sign.tiktokcdn.com/tos-alisg-p-0051c001-sg/oI6TmLeieTEOS0lpA8AIN3iiRv1mVdDQBBDBgE~tplv-tiktokx-origin.jpeg?dr=14582&refresh_token=005ca0ae&x-expires=1778346000&x-signature=%2Bt3HBLi59dXazkpfbYNMxtwBiYg%3D&t=4d5b0474&ps=13740610&shp=0c75dd76&shcp=9b759fb9&idc=sg1",
+        "Ad Dates": [
+            {
+                "FirstShown": "2026-05-07",
+                "FirstShownTimestamp": 1778112000
+            },
+            {
+                "LastShown": "2026-05-08",
+                "LastShownTimestamp": 1778198400
+            }
+        ],
+        "Ad Audience": "0-1K",
+        "Ad Details": [
+            {
+                "Estimated Audience": "0-1K"
+            },
+            {
+                "Spent": ""
+            },
+            {
+                "Type": "2"
+            },
+            {
+                "Audit Status": "1"
+            },
+            {
+                "Impression": ""
+            },
+            {
+                "Sponsor": "LEARNING MANAGEMENT DEVELOPPEMENT"
+            },
+            {
+                "Target Audience Size": "5.0M-6.1M"
+            }
+        ],
+        "Ad Media": [
+            "Video 1: https://library.tiktok.com/api/v1/cdn/1778327734/video/aHR0cHM6Ly92NTgudGlrdG9rY2RuLmNvbS92aWRlby90b3Mvbm8xYS90b3Mtbm8xYS12ZS01MWM3MTAtbm8vbzhsZXFCU1BFQVFUOE9RRDZCM2l5RWVENUlGTmdFaVRwTEJpRHYv/67205248-fa24-43ad-bd3f-539f687b2c9d?VExpiration=1778349360&VSignature=L4PR2t0_0JKblP-x0ZXMSQ&a=475769&bt=939&btag=e000b8000&bti=PDU2NmYwMy86&ft=.NpOcInz7ThJWixPXq8Zmo&l=20260509195533D8EE45272BDD6758A573&mime_type=video_mp4&rc=Zzw1NWQzNTw8ZWg8M2Q8M0BpM3FobXk5cjV3ODMzODYzNEA0NjY1MDYzNWIxMDIzLy5gYSNpZDRmMmRrcTJhLS1kMDFzcw%3D%3D&signature=%2FkG6sA2gQ09EHhEbHq2Ync%2B3bIQDbSVdsoHs3e6Anp8%3D&vvpl=1",
+            "Image 1: https://p16-common-sign.tiktokcdn.com/tos-alisg-p-0051c001-sg/oI6TmLeieTEOS0lpA8AIN3iiRv1mVdDQBBDBgE~tplv-tiktokx-origin.jpeg?dr=14582&refresh_token=005ca0ae&x-expires=1778346000&x-signature=%2Bt3HBLi59dXazkpfbYNMxtwBiYg%3D&t=4d5b0474&ps=13740610&shp=0c75dd76&shcp=9b759fb9&idc=sg1"
+        ],
+        "Ad Targeting": {
+            "regions": [
+                {
+                    "region": "FR",
+                    "impressions": "0-1K"
+                }
+            ],
+            "age": [
+                {
+                    "region": "FR",
+                    "13-17": false,
+                    "18-24": true,
+                    "25-34": false,
+                    "35-44": false,
+                    "45-54": false,
+                    "55+": false
+                }
+            ],
+            "gender": [
+                {
+                    "region": "FR",
+                    "female": true,
+                    "male": true,
+                    "unknown": true
+                }
+            ]
+        },
+        "Ad Sponsor": "LEARNING MANAGEMENT DEVELOPPEMENT",
+        "Ad Target Audience Size": "5.0M-6.1M",
+        "Ad Detail URL": "https://library.tiktok.com/ads/detail/?ad_id=1864481456108673"
+    },
+    {
+        "AD ID": "1864487180281874",
+        "Advertiser Name": "LEARNING MANAGEMENT DEVELOPPEMENT",
+        "AD Preview": "https://p16-common-sign.tiktokcdn.com/tos-alisg-p-0051c001-sg/ocef3lAveAIOYdSACGbSiBCotIDgLGvRJ2MQID~tplv-tiktokx-origin.jpeg?dr=14582&refresh_token=ba23bfe4&x-expires=1778346000&x-signature=iK92hxZ6EMQFdzZoKVqqygyY1%2Bg%3D&t=4d5b0474&ps=13740610&shp=0c75dd76&shcp=9b759fb9&idc=sg1",
+        "Ad Dates": [
+            {
+                "FirstShown": "2026-05-07",
+                "FirstShownTimestamp": 1778112000
+            },
+            {
+                "LastShown": "2026-05-08",
+                "LastShownTimestamp": 1778198400
+            }
+        ],
+        "Ad Audience": "0-1K",
+        "Ad Details": [
+            {
+                "Estimated Audience": "0-1K"
+            },
+            {
+                "Spent": ""
+            },
+            {
+                "Type": "2"
+            },
+            {
+                "Audit Status": "1"
+            },
+            {
+                "Impression": ""
+            },
+            {
+                "Sponsor": "LEARNING MANAGEMENT DEVELOPPEMENT"
+            },
+            {
+                "Target Audience Size": "5.0M-6.1M"
+            }
+        ],
+        "Ad Media": [
+            "Video 1: https://library.tiktok.com/api/v1/cdn/1778327740/video/aHR0cHM6Ly92NzcudGlrdG9rY2RuLmNvbS8yMDZlOTdhNTc0MDllNWU4OTI3MTMyNzhmY2FhZWY2OS82OWZmNzUzZS92aWRlby90b3MvdXNlYXN0MmEvdG9zLXVzZWFzdDJhLXZlLTAwNTFjNzk5LWV1dHRwL293ZmpMSUhHYlJKQUVnTGVEVmdBaThHUzRlUUxJRDMyQ0EzZGF2Lw==/8946b9f0-95d6-4a81-a8b9-2244cd166b85?a=475769&bt=521&btag=e00088000&bti=PDU2NmYwMy86&ft=.NpOcInz7ThiWixPXq8Zmo&l=2026050919553969D1751FBA4B645C21D9&mime_type=video_mp4&rc=MzYzPGg2OTNnZmhoaTQ8O0BpMzdlaGs5cm51ODMzODYzNEBiYDZiYWAzNWExNWIxYzEtYSNpZWNkMmQ0NWNhLS1kMDFzcw%3D%3D&signature=vd5k%2FCt8UCd6Eok1y852jt56QN03NIPiGU6sEAv3L08%3D&vvpl=1",
+            "Image 1: https://p16-common-sign.tiktokcdn.com/tos-alisg-p-0051c001-sg/ocef3lAveAIOYdSACGbSiBCotIDgLGvRJ2MQID~tplv-tiktokx-origin.jpeg?dr=14582&refresh_token=ba23bfe4&x-expires=1778346000&x-signature=iK92hxZ6EMQFdzZoKVqqygyY1%2Bg%3D&t=4d5b0474&ps=13740610&shp=0c75dd76&shcp=9b759fb9&idc=sg1"
+        ],
+        "Ad Targeting": {
+            "regions": [
+                {
+                    "region": "FR",
+                    "impressions": "0-1K"
+                }
+            ],
+            "age": [
+                {
+                    "region": "FR",
+                    "13-17": false,
+                    "18-24": true,
+                    "25-34": false,
+                    "35-44": false,
+                    "45-54": false,
+                    "55+": false
+                }
+            ],
+            "gender": [
+                {
+                    "region": "FR",
+                    "female": true,
+                    "male": true,
+                    "unknown": true
+                }
+            ]
+        },
+        "Ad Sponsor": "LEARNING MANAGEMENT DEVELOPPEMENT",
+        "Ad Target Audience Size": "5.0M-6.1M",
+        "Ad Detail URL": "https://library.tiktok.com/ads/detail/?ad_id=1864487180281874"
+    },
+    {
+        "AD ID": "1864492839572737",
+        "Advertiser Name": "LEARNING MANAGEMENT DEVELOPPEMENT",
+        "AD Preview": "https://p19-common-sign-useastred.tiktokcdn-eu.com/tos-no1a-p-0037-no/oUdEyId3wAq5CW57Kifcr0BAXoMaGiBPTITOBl~tplv-noop.image?dr=18692&refresh_token=f4edfd92&x-expires=1778349389&x-signature=F5TYXSXTIGOF8Z4P1UkLnXlL%2BQ4%3D&t=9276707c&ps=14f1eb3e&shp=9e36835a&shcp=0c75dd76&idc=sg1&VideoID=v24025gl0000d1ina7fog65pb72cvr30",
+        "Ad Dates": [
+            {
+                "FirstShown": "2026-05-07",
+                "FirstShownTimestamp": 1778112000
+            },
+            {
+                "LastShown": "2026-05-08",
+                "LastShownTimestamp": 1778198400
+            }
+        ],
+        "Ad Audience": "0-1K",
+        "Ad Details": [
+            {
+                "Estimated Audience": "0-1K"
+            },
+            {
+                "Spent": ""
+            },
+            {
+                "Type": "2"
+            },
+            {
+                "Audit Status": "1"
+            },
+            {
+                "Impression": ""
+            },
+            {
+                "Sponsor": "LEARNING MANAGEMENT DEVELOPPEMENT"
+            },
+            {
+                "Target Audience Size": "5.0M-6.1M"
+            }
+        ],
+        "Ad Media": [
+            "Video 1: https://library.tiktok.com/api/v1/cdn/1778327740/video/aHR0cHM6Ly92NzcudGlrdG9rY2RuLmNvbS8yYzlkYmUyNmU0YTAyYTViMGM1MzlkMTVmZDE0ODY2NC82OWZmNzU0ZC92aWRlby90b3Mvbm8xYS90b3Mtbm8xYS12ZS0wMDY4YzAwMS1uby9vUUdxYlF5QjBBZDU3R1BpaUc4clNBSVdCQ1RsZk1qd2NLRWdWTy8=/b77f6f6b-2449-44c7-b5a3-7c01f65118e3?a=475769&bt=1151&btag=e00048000&bti=PDU2NmYwMy86&ft=.NpOcInz7ThiWixPXq8Zmo&l=2026050919553969D1751FBA4B645C21D9&mime_type=video_mp4&rc=aDM8Ozc6Z2lnZzk6PDo6ZUBpM3VmOnM5cjpxNDMzbzgzNUAzNjEwMjI1Ni4xLmMtYjZeYSMwcy9fMmRjXmZhLS1kLzFzcw%3D%3D&signature=SyqPxS4QyZaRN7GrNStf9nXCwNlT9K0iB%2BtH7NrM%2FL8%3D&vvpl=1"
+        ],
+        "Ad Targeting": {
+            "regions": [
+                {
+                    "region": "FR",
+                    "impressions": "0-1K"
+                }
+            ],
+            "age": [
+                {
+                    "region": "FR",
+                    "13-17": false,
+                    "18-24": true,
+                    "25-34": false,
+                    "35-44": false,
+                    "45-54": false,
+                    "55+": false
+                }
+            ],
+            "gender": [
+                {
+                    "region": "FR",
+                    "female": true,
+                    "male": true,
+                    "unknown": true
+                }
+            ]
+        },
+        "Ad Sponsor": "LEARNING MANAGEMENT DEVELOPPEMENT",
+        "Ad Target Audience Size": "5.0M-6.1M",
+        "Ad Detail URL": "https://library.tiktok.com/ads/detail/?ad_id=1864492839572737"
+    },
+    {
+        "AD ID": "1864492839587041",
+        "Advertiser Name": "LEARNING MANAGEMENT DEVELOPPEMENT",
+        "AD Preview": "https://p16-common-sign.tiktokcdn.com/tos-alisg-p-0051c001-sg/oI6TmLeieTEOS0lpA8AIN3iiRv1mVdDQBBDBgE~tplv-tiktokx-origin.jpeg?dr=14582&refresh_token=005ca0ae&x-expires=1778346000&x-signature=%2Bt3HBLi59dXazkpfbYNMxtwBiYg%3D&t=4d5b0474&ps=13740610&shp=0c75dd76&shcp=9b759fb9&idc=sg1",
+        "Ad Dates": [
+            {
+                "FirstShown": "2026-05-07",
+                "FirstShownTimestamp": 1778112000
+            },
+            {
+                "LastShown": "2026-05-08",
+                "LastShownTimestamp": 1778198400
+            }
+        ],
+        "Ad Audience": "0-1K",
+        "Ad Details": [
+            {
+                "Estimated Audience": "0-1K"
+            },
+            {
+                "Spent": ""
+            },
+            {
+                "Type": "2"
+            },
+            {
+                "Audit Status": "1"
+            },
+            {
+                "Impression": ""
+            },
+            {
+                "Sponsor": "LEARNING MANAGEMENT DEVELOPPEMENT"
+            },
+            {
+                "Target Audience Size": "5.0M-6.1M"
+            }
+        ],
+        "Ad Media": [
+            "Video 1: https://library.tiktok.com/api/v1/cdn/1778327740/video/aHR0cHM6Ly92NzcudGlrdG9rY2RuLmNvbS84Y2U0ODdiOTk0NGVmZDEyZmUxZDM4NjFhNzE0NDQ5ZC82OWZmNzUzNi92aWRlby90b3Mvbm8xYS90b3Mtbm8xYS12ZS01MWM3MTAtbm8vbzhsZXFCU1BFQVFUOE9RRDZCM2l5RWVENUlGTmdFaVRwTEJpRHYv/0bf89bee-7116-4730-bceb-9f827981ce04?a=475769&bt=939&btag=e000b8000&bti=PDU2NmYwMy86&ft=.NpOcInz7ThiWixPXq8Zmo&l=2026050919553969D1751FBA4B645C21D9&mime_type=video_mp4&rc=Zzw1NWQzNTw8ZWg8M2Q8M0BpM3FobXk5cjV3ODMzODYzNEA0NjY1MDYzNWIxMDIzLy5gYSNpZDRmMmRrcTJhLS1kMDFzcw%3D%3D&signature=A5MH8gKY1%2BTC9eH9Edw5nV7KEwu9uQgmKGNHNWRgSi0%3D&vvpl=1",
+            "Image 1: https://p16-common-sign.tiktokcdn.com/tos-alisg-p-0051c001-sg/oI6TmLeieTEOS0lpA8AIN3iiRv1mVdDQBBDBgE~tplv-tiktokx-origin.jpeg?dr=14582&refresh_token=005ca0ae&x-expires=1778346000&x-signature=%2Bt3HBLi59dXazkpfbYNMxtwBiYg%3D&t=4d5b0474&ps=13740610&shp=0c75dd76&shcp=9b759fb9&idc=sg1"
+        ],
+        "Ad Targeting": {
+            "regions": [
+                {
+                    "region": "FR",
+                    "impressions": "0-1K"
+                }
+            ],
+            "age": [
+                {
+                    "region": "FR",
+                    "13-17": false,
+                    "18-24": true,
+                    "25-34": false,
+                    "35-44": false,
+                    "45-54": false,
+                    "55+": false
+                }
+            ],
+            "gender": [
+                {
+                    "region": "FR",
+                    "female": true,
+                    "male": true,
+                    "unknown": true
+                }
+            ]
+        },
+        "Ad Sponsor": "LEARNING MANAGEMENT DEVELOPPEMENT",
+        "Ad Target Audience Size": "5.0M-6.1M",
+        "Ad Detail URL": "https://library.tiktok.com/ads/detail/?ad_id=1864492839587041"
+    },
+    {
+        "AD ID": "1858961112319185",
+        "Advertiser Name": "LEARNING MANAGEMENT DEVELOPPEMENT",
+        "AD Preview": "https://p16-common-sign.tiktokcdn.com/tos-alisg-p-0051c001-sg/oIvXZgUjrvSAAfmMnGIHCLdGbDeG0AngMgejVC~tplv-tiktokx-origin.jpeg?dr=14582&refresh_token=7f8eac73&x-expires=1778346000&x-signature=N25g3busRN2uFIIDblZyjiXqHlQ%3D&t=4d5b0474&ps=13740610&shp=0c75dd76&shcp=9b759fb9&idc=sg1",
+        "Ad Dates": [
+            {
+                "FirstShown": "2026-03-07",
+                "FirstShownTimestamp": 1772841600
+            },
+            {
+                "LastShown": "2026-05-08",
+                "LastShownTimestamp": 1778198400
+            }
+        ],
+        "Ad Audience": "10K-100K",
+        "Ad Details": [
+            {
+                "Estimated Audience": "10K-100K"
+            },
+            {
+                "Spent": ""
+            },
+            {
+                "Type": "2"
+            },
+            {
+                "Audit Status": "1"
+            },
+            {
+                "Impression": ""
+            },
+            {
+                "Sponsor": "LEARNING MANAGEMENT DEVELOPPEMENT"
+            },
+            {
+                "Target Audience Size": "5.0M-6.1M"
+            }
+        ],
+        "Ad Media": [
+            "Video 1: https://library.tiktok.com/api/v1/cdn/1778327740/video/aHR0cHM6Ly92NzcudGlrdG9rY2RuLmNvbS84ZDhlMDI5N2I1MzViN2Y5Y2VlMTFmMTY2ZmE1NDNiZi82OWZmNzU0ZC92aWRlby90b3Mvbm8xYS90b3Mtbm8xYS12ZS01MWM3MTAtbm8vb1UwU2Nlbk1VQUd2QWJHc0FnTEFkTWdHamVuQ1ZmWklER0N6clIv/5312759d-f0b2-4bd2-9889-f234b60ed9bb?a=475769&bt=840&btag=e00088000&bti=PDU2NmYwMy86&ft=.NpOcInz7ThiWixPXq8Zmo&l=2026050919553969D1751FBA4B645C21D9&mime_type=video_mp4&rc=aTtkNDk4OjM7ZjwzaWZnZUBpM2tuNWo5cjVnNzMzODYzNEAzMjAyNjQ1NjExNDAuNjJfYSNwXi4uMmRrL3FhLS1kMC1zcw%3D%3D&signature=q56VCWV%2FFssPZe3BmlOwCn9VMTYDX1mzIeND%2BAheHuQ%3D&vvpl=1",
+            "Image 1: https://p16-common-sign.tiktokcdn.com/tos-alisg-p-0051c001-sg/oIvXZgUjrvSAAfmMnGIHCLdGbDeG0AngMgejVC~tplv-tiktokx-origin.jpeg?dr=14582&refresh_token=7f8eac73&x-expires=1778346000&x-signature=N25g3busRN2uFIIDblZyjiXqHlQ%3D&t=4d5b0474&ps=13740610&shp=0c75dd76&shcp=9b759fb9&idc=sg1"
+        ],
+        "Ad Targeting": {
+            "regions": [
+                {
+                    "region": "FR",
+                    "impressions": "46K"
+                }
+            ],
+            "age": [
+                {
+                    "region": "FR",
+                    "13-17": false,
+                    "18-24": true,
+                    "25-34": false,
+                    "35-44": false,
+                    "45-54": false,
+                    "55+": false
+                }
+            ],
+            "gender": [
+                {
+                    "region": "FR",
+                    "female": true,
+                    "male": true,
+                    "unknown": true
+                }
+            ]
+        },
+        "Ad Sponsor": "LEARNING MANAGEMENT DEVELOPPEMENT",
+        "Ad Target Audience Size": "5.0M-6.1M",
+        "Ad Detail URL": "https://library.tiktok.com/ads/detail/?ad_id=1858961112319185"
+    },
+    {
+        "AD ID": "1858961112327441",
+        "Advertiser Name": "LEARNING MANAGEMENT DEVELOPPEMENT",
+        "AD Preview": "https://p16-common-sign.tiktokcdn.com/tos-alisg-p-0051c001-sg/ocef3lAveAIOYdSACGbSiBCotIDgLGvRJ2MQID~tplv-tiktokx-origin.jpeg?dr=14582&refresh_token=ba23bfe4&x-expires=1778346000&x-signature=iK92hxZ6EMQFdzZoKVqqygyY1%2Bg%3D&t=4d5b0474&ps=13740610&shp=0c75dd76&shcp=9b759fb9&idc=sg1",
+        "Ad Dates": [
+            {
+                "FirstShown": "2026-03-07",
+                "FirstShownTimestamp": 1772841600
+            },
+            {
+                "LastShown": "2026-05-08",
+                "LastShownTimestamp": 1778198400
+            }
+        ],
+        "Ad Audience": "10K-100K",
+        "Ad Details": [
+            {
+                "Estimated Audience": "10K-100K"
+            },
+            {
+                "Spent": ""
+            },
+            {
+                "Type": "2"
+            },
+            {
+                "Audit Status": "1"
+            },
+            {
+                "Impression": ""
+            },
+            {
+                "Sponsor": "LEARNING MANAGEMENT DEVELOPPEMENT"
+            },
+            {
+                "Target Audience Size": "5.0M-6.1M"
+            }
+        ],
+        "Ad Media": [
+            "Video 1: https://library.tiktok.com/api/v1/cdn/1778327740/video/aHR0cHM6Ly92NzcudGlrdG9rY2RuLmNvbS8yMDZlOTdhNTc0MDllNWU4OTI3MTMyNzhmY2FhZWY2OS82OWZmNzUzZS92aWRlby90b3MvdXNlYXN0MmEvdG9zLXVzZWFzdDJhLXZlLTAwNTFjNzk5LWV1dHRwL293ZmpMSUhHYlJKQUVnTGVEVmdBaThHUzRlUUxJRDMyQ0EzZGF2Lw==/3dad1868-7dac-4b7f-82b8-6c6233805549?a=475769&bt=521&btag=e00088000&bti=PDU2NmYwMy86&ft=.NpOcInz7ThiWixPXq8Zmo&l=2026050919553969D1751FBA4B645C21D9&mime_type=video_mp4&rc=MzYzPGg2OTNnZmhoaTQ8O0BpMzdlaGs5cm51ODMzODYzNEBiYDZiYWAzNWExNWIxYzEtYSNpZWNkMmQ0NWNhLS1kMDFzcw%3D%3D&signature=vd5k%2FCt8UCd6Eok1y852jt56QN03NIPiGU6sEAv3L08%3D&vvpl=1",
+            "Image 1: https://p16-common-sign.tiktokcdn.com/tos-alisg-p-0051c001-sg/ocef3lAveAIOYdSACGbSiBCotIDgLGvRJ2MQID~tplv-tiktokx-origin.jpeg?dr=14582&refresh_token=ba23bfe4&x-expires=1778346000&x-signature=iK92hxZ6EMQFdzZoKVqqygyY1%2Bg%3D&t=4d5b0474&ps=13740610&shp=0c75dd76&shcp=9b759fb9&idc=sg1"
+        ],
+        "Ad Targeting": {
+            "regions": [
+                {
+                    "region": "FR",
+                    "impressions": "27K"
+                }
+            ],
+            "age": [
+                {
+                    "region": "FR",
+                    "13-17": false,
+                    "18-24": true,
+                    "25-34": false,
+                    "35-44": false,
+                    "45-54": false,
+                    "55+": false
+                }
+            ],
+            "gender": [
+                {
+                    "region": "FR",
+                    "female": true,
+                    "male": true,
+                    "unknown": true
+                }
+            ]
+        },
+        "Ad Sponsor": "LEARNING MANAGEMENT DEVELOPPEMENT",
+        "Ad Target Audience Size": "5.0M-6.1M",
+        "Ad Detail URL": "https://library.tiktok.com/ads/detail/?ad_id=1858961112327441"
+    },
+    {
+        "AD ID": "1858961118325842",
+        "Advertiser Name": "LEARNING MANAGEMENT DEVELOPPEMENT",
+        "AD Preview": "https://p16-common-sign.tiktokcdn.com/tos-alisg-p-0051c001-sg/o0oARBAApJiijIz1zZAZjM0JaREPCY0JH9iUy~tplv-tiktokx-origin.jpeg?dr=14582&refresh_token=5ef8093e&x-expires=1778346000&x-signature=y18vN89DBk5dGF7Rfr6%2FK%2FBk6EQ%3D&t=4d5b0474&ps=13740610&shp=0c75dd76&shcp=9b759fb9&idc=sg1",
+        "Ad Dates": [
+            {
+                "FirstShown": "2026-03-07",
+                "FirstShownTimestamp": 1772841600
+            },
+            {
+                "LastShown": "2026-05-08",
+                "LastShownTimestamp": 1778198400
+            }
+        ],
+        "Ad Audience": "10K-100K",
+        "Ad Details": [
+            {
+                "Estimated Audience": "10K-100K"
+            },
+            {
+                "Spent": ""
+            },
+            {
+                "Type": "2"
+            },
+            {
+                "Audit Status": "1"
+            },
+            {
+                "Impression": ""
+            },
+            {
+                "Sponsor": "LEARNING MANAGEMENT DEVELOPPEMENT"
+            },
+            {
+                "Target Audience Size": "5.0M-6.1M"
+            }
+        ],
+        "Ad Media": [
+            "Video 1: https://library.tiktok.com/api/v1/cdn/1778327740/video/aHR0cHM6Ly92NzcudGlrdG9rY2RuLmNvbS85NmZhMDE3NzhjMGQzMmFmNWUyNTJjMzliOGZkNWRjNi82OWZmNzUzOC92aWRlby90b3Mvbm8xYS90b3Mtbm8xYS12ZS01MWM3MTAtbm8vb3N6Q1JQME5wQnlBaVI0REpJQVFhQUp6VTFFRVlqdEJpOUo2SC8=/b3942060-53bf-4870-854d-21962dc8adc8?a=475769&bt=892&btag=e000b8000&bti=PDU2NmYwMy86&ft=.NpOcInz7ThiWixPXq8Zmo&l=2026050919553969D1751FBA4B645C21D9&mime_type=video_mp4&rc=ZGllaTxoaGgzNmZmPGY4OUBpam15NnY5cml5NzMzODYzNEA1YC0wYzZjXjMxNF9eMTMtYSNjamhtMmRjNjVhLS1kMDFzcw%3D%3D&signature=VMGArqQsOEaYCIinS7WK8cTnKPaAhRffbK9UGHGX%2BO8%3D&vvpl=1",
+            "Image 1: https://p16-common-sign.tiktokcdn.com/tos-alisg-p-0051c001-sg/o0oARBAApJiijIz1zZAZjM0JaREPCY0JH9iUy~tplv-tiktokx-origin.jpeg?dr=14582&refresh_token=5ef8093e&x-expires=1778346000&x-signature=y18vN89DBk5dGF7Rfr6%2FK%2FBk6EQ%3D&t=4d5b0474&ps=13740610&shp=0c75dd76&shcp=9b759fb9&idc=sg1"
+        ],
+        "Ad Targeting": {
+            "regions": [
+                {
+                    "region": "FR",
+                    "impressions": "15K"
+                }
+            ],
+            "age": [
+                {
+                    "region": "FR",
+                    "13-17": false,
+                    "18-24": true,
+                    "25-34": false,
+                    "35-44": false,
+                    "45-54": false,
+                    "55+": false
+                }
+            ],
+            "gender": [
+                {
+                    "region": "FR",
+                    "female": true,
+                    "male": true,
+                    "unknown": true
+                }
+            ]
+        },
+        "Ad Sponsor": "LEARNING MANAGEMENT DEVELOPPEMENT",
+        "Ad Target Audience Size": "5.0M-6.1M",
+        "Ad Detail URL": "https://library.tiktok.com/ads/detail/?ad_id=1858961118325842"
+    },
+    {
+        "AD ID": "1859954691814578",
+        "Advertiser Name": "LEARNING MANAGEMENT DEVELOPPEMENT",
+        "AD Preview": "https://p16-sign-sg.tiktokcdn.com/tos-alisg-p-0051c001-sg/oMNbCfz8DBApFmxDF6E0tlI4OBQI4wfgglNJOA~tplv-tiktokx-origin.jpeg?dr=14582&refresh_token=9831defd&x-expires=1778346000&x-signature=EYhohFkmywJlO41KeuAjG9Dr4ng%3D&t=4d5b0474&ps=13740610&shp=0c75dd76&shcp=9b759fb9&idc=sg1",
+        "Ad Dates": [
+            {
+                "FirstShown": "2026-03-18",
+                "FirstShownTimestamp": 1773792000
+            },
+            {
+                "LastShown": "2026-05-08",
+                "LastShownTimestamp": 1778198400
+            }
+        ],
+        "Ad Audience": "10K-100K",
+        "Ad Details": [
+            {
+                "Estimated Audience": "10K-100K"
+            },
+            {
+                "Spent": ""
+            },
+            {
+                "Type": "2"
+            },
+            {
+                "Audit Status": "1"
+            },
+            {
+                "Impression": ""
+            },
+            {
+                "Sponsor": "LEARNING MANAGEMENT DEVELOPPEMENT"
+            },
+            {
+                "Target Audience Size": "5.0M-6.1M"
+            }
+        ],
+        "Ad Media": [
+            "Video 1: https://library.tiktok.com/api/v1/cdn/1778327740/video/aHR0cHM6Ly92NzcudGlrdG9rY2RuLmNvbS8xYmE3ZTAyYzE4NjVlNTJlNjZmODMzMTk3NmZhMjAyMC82OWZmNzU0Mi92aWRlby90b3Mvbm8xYS90b3Mtbm8xYS12ZS01MWM3MTAtbm8vbzBMYXhmQWZqSUR2eEY1U0FnZ09JcFExZWNHcG5DRGduR0JiZEwv/fd623532-e65d-4eca-b9b4-fc776841a5d3?a=475769&bt=545&btag=e00088000&bti=PDU2NmYwMy86&ft=.NpOcInz7ThiWixPXq8Zmo&l=2026050919553969D1751FBA4B645C21D9&mime_type=video_mp4&rc=NTdpOGkzZmU0M2g6ZTc2M0BpMzM5b3g5cnloNzMzODYzNEAtNDEzX2M2NmExLmFgMTUxYSNgNC0zMmRjbXFhLS1kMC1zcw%3D%3D&signature=WHPgedOg8zGhYWF8VRqOHfNW9mQ1aGGGv3uG5zsNRI8%3D&vvpl=1",
+            "Image 1: https://p16-sign-sg.tiktokcdn.com/tos-alisg-p-0051c001-sg/oMNbCfz8DBApFmxDF6E0tlI4OBQI4wfgglNJOA~tplv-tiktokx-origin.jpeg?dr=14582&refresh_token=9831defd&x-expires=1778346000&x-signature=EYhohFkmywJlO41KeuAjG9Dr4ng%3D&t=4d5b0474&ps=13740610&shp=0c75dd76&shcp=9b759fb9&idc=sg1"
+        ],
+        "Ad Targeting": {
+            "regions": [
+                {
+                    "region": "FR",
+                    "impressions": "13K"
+                }
+            ],
+            "age": [
+                {
+                    "region": "FR",
+                    "13-17": false,
+                    "18-24": true,
+                    "25-34": false,
+                    "35-44": false,
+                    "45-54": false,
+                    "55+": false
+                }
+            ],
+            "gender": [
+                {
+                    "region": "FR",
+                    "female": true,
+                    "male": true,
+                    "unknown": true
+                }
+            ]
+        },
+        "Ad Sponsor": "LEARNING MANAGEMENT DEVELOPPEMENT",
+        "Ad Target Audience Size": "5.0M-6.1M",
+        "Ad Detail URL": "https://library.tiktok.com/ads/detail/?ad_id=1859954691814578"
+    },
+    {
+        "AD ID": "1859954692403313",
+        "Advertiser Name": "LEARNING MANAGEMENT DEVELOPPEMENT",
+        "AD Preview": "https://p16-common-sign.tiktokcdn.com/tos-no1a-p-68c710-no/oou4xCoHfAEuNxEdBBIzqWAEuihniCcmMFpIq1~tplv-noop.image?dr=18692&refresh_token=f5bfc447&x-expires=1778349509&x-signature=Xurjlzkj6S4Mso68B1pGKwwYpz0%3D&t=9276707c&ps=14f1eb3e&shp=9e36835a&shcp=0c75dd76&idc=sg1&VideoID=v0f044gc0000cosbhovog65l6alqc220",
+        "Ad Dates": [
+            {
+                "FirstShown": "2026-03-18",
+                "FirstShownTimestamp": 1773792000
+            },
+            {
+                "LastShown": "2026-05-08",
+                "LastShownTimestamp": 1778198400
+            }
+        ],
+        "Ad Audience": "10K-100K",
+        "Ad Details": [
+            {
+                "Estimated Audience": "10K-100K"
+            },
+            {
+                "Spent": ""
+            },
+            {
+                "Type": "2"
+            },
+            {
+                "Audit Status": "1"
+            },
+            {
+                "Impression": ""
+            },
+            {
+                "Sponsor": "LEARNING MANAGEMENT DEVELOPPEMENT"
+            },
+            {
+                "Target Audience Size": "5.0M-6.1M"
+            }
+        ],
+        "Ad Media": [
+            "Video 1: https://library.tiktok.com/api/v1/cdn/1778327740/video/aHR0cHM6Ly92NzcudGlrdG9rY2RuLmNvbS82ZDgwYTIzYWM3YmE5YzRhOTk0OWMwY2EyYWY3OThlZi82OWZmNzVjNS92aWRlby90b3Mvbm8xYS90b3Mtbm8xYS12ZS02OGM3MTAtbm8vbzRCMUFjRU9mRkpkWkVMZ1FtRURxd2ZJSW0xNVFqZFZEUHhqTVIv/4f6f4e61-e941-4be7-8dc2-c22f03b12663?a=475769&bt=715&btag=e00090000&bti=PDU2NmYwMy86&ft=.NpOcInz7ThiWixPXq8Zmo&l=2026050919553969D1751FBA4B645C21D9&mime_type=video_mp4&rc=MzlkODw7M2c6OWdlNjY7Z0BpMzV0ZG85cnJlcjMzZjczM0AzLjZfLTA2XzQxNl4zLzM2YSMvYGkzMmRzZXBgLS1kMWNzcw%3D%3D&signature=%2F%2F0ay4m07%2F3KKBktU8eM1Mc3Alv0M4L3h9KFoLXcH00%3D&vvpl=1"
+        ],
+        "Ad Targeting": {
+            "regions": [
+                {
+                    "region": "FR",
+                    "impressions": "12K"
+                }
+            ],
+            "age": [
+                {
+                    "region": "FR",
+                    "13-17": false,
+                    "18-24": true,
+                    "25-34": false,
+                    "35-44": false,
+                    "45-54": false,
+                    "55+": false
+                }
+            ],
+            "gender": [
+                {
+                    "region": "FR",
+                    "female": true,
+                    "male": true,
+                    "unknown": true
+                }
+            ]
+        },
+        "Ad Sponsor": "LEARNING MANAGEMENT DEVELOPPEMENT",
+        "Ad Target Audience Size": "5.0M-6.1M",
+        "Ad Detail URL": "https://library.tiktok.com/ads/detail/?ad_id=1859954692403313"
+    }
+]

@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Automation Settings | Ad Intelligence</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-main: #0B0F19;
+            --bg-card: #151E2F;
+            --bg-input: #0B0F19;
+            --border-color: #2A3441;
+            --border-hover: #4B5563;
+            --text-primary: #F8FAFC;
+            --text-secondary: #94A3B8;
+            --accent-primary: #6366F1;
+            --accent-hover: #8B5CF6;
+            --success: #10B981;
+            --danger: #EF4444;
+            --warning: #F59E0B;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        body { background: var(--bg-main); color: var(--text-primary); min-height: 100vh; overflow-x: hidden; }
+
+        /* Navbar */
+        .navbar {
+            position: sticky; top: 0; z-index: 100;
+            background: rgba(11, 15, 25, 0.8);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border-color);
+            padding: 16px 32px;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .navbar h1 { font-size: 1.4em; font-weight: 700; display: flex; align-items: center; gap: 8px; cursor: pointer; }
+        .navbar h1 span {
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-hover));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .nav-links { display: flex; gap: 24px; align-items: center; }
+        .nav-link { color: var(--text-secondary); text-decoration: none; font-weight: 500; font-size: 0.9em; transition: color 0.2s; }
+        .nav-link:hover, .nav-link.active { color: var(--text-primary); }
+
+        .container { max-width: 1400px; margin: 0 auto; padding: 32px; }
+
+        /* Automation Header */
+        .page-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 32px; }
+        .page-title h2 { font-size: 1.8em; font-weight: 700; margin-bottom: 8px; }
+        .page-title p { color: var(--text-secondary); font-size: 0.95em; }
+
+        /* Master Toggle Card */
+        .config-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; margin-bottom: 32px; }
+        .card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px; padding: 24px; position: relative; overflow: hidden; }
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .card-title { font-size: 1.1em; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 10px; }
+        
+        /* Toggle Switch */
+        .switch { position: relative; display: inline-block; width: 50px; height: 26px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--border-color); transition: .4s; border-radius: 24px; }
+        .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--success); box-shadow: 0 0 10px rgba(16, 185, 129, 0.4); }
+        input:checked + .slider:before { transform: translateX(24px); }
+
+        /* Frequency & Volume Inputs */
+        .setting-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; align-items: center; }
+        .setting-label { font-size: 0.9em; font-weight: 600; color: var(--text-secondary); }
+        .input-group { display: flex; align-items: center; gap: 8px; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 10px; padding: 4px 12px; }
+        .input-group input { background: transparent; border: none; color: var(--text-primary); width: 100%; padding: 8px 0; font-size: 0.95em; outline: none; }
+        .input-group span { font-size: 0.8em; color: var(--text-secondary); font-weight: 600; }
+
+        /* Keywords Section */
+        .keywords-panel { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px; padding: 24px; }
+        .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+        .search-box { background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 10px; padding: 10px 16px; display: flex; align-items: center; gap: 12px; min-width: 300px; }
+        .search-box input { background: transparent; border: none; color: var(--text-primary); width: 100%; outline: none; font-size: 0.9em; }
+        .search-box svg { color: var(--text-secondary); }
+
+        .btn-add { background: var(--accent-primary); color: white; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 8px; }
+        .btn-add:hover { background: var(--accent-hover); transform: translateY(-2px); }
+
+        /* Keywords Table */
+        .table-container { width: 100%; overflow-x: auto; border-radius: 12px; border: 1px solid var(--border-color); }
+        table { width: 100%; border-collapse: collapse; background: var(--bg-input); font-size: 0.9em; }
+        th { text-align: left; padding: 16px; color: var(--text-secondary); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; font-size: 0.75em; border-bottom: 1px solid var(--border-color); }
+        td { padding: 16px; border-bottom: 1px solid var(--border-color); color: var(--text-primary); vertical-align: middle; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: rgba(255,255,255,0.02); }
+
+        .platform-status { display: flex; flex-direction: column; gap: 4px; }
+        .status-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 6px; font-size: 0.75em; font-weight: 700; }
+        .status-badge.completed { background: rgba(16, 185, 129, 0.1); color: var(--success); border: 1px solid rgba(16, 185, 129, 0.3); }
+        .status-badge.failed { background: rgba(239, 68, 68, 0.1); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.3); }
+        .status-badge.pending { background: rgba(148, 163, 184, 0.1); color: var(--text-secondary); border: 1px solid rgba(148, 163, 184, 0.3); }
+        .last-date { font-size: 0.7em; color: var(--text-secondary); }
+
+        .category-tag { background: rgba(99, 102, 241, 0.1); color: var(--accent-primary); padding: 4px 8px; border-radius: 4px; font-size: 0.8em; font-weight: 600; border: 1px solid rgba(99, 102, 241, 0.2); }
+
+        .btn-delete { background: transparent; border: 1px solid var(--border-color); color: var(--text-secondary); width: 32px; height: 32px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+        .btn-delete:hover { border-color: var(--danger); color: var(--danger); background: rgba(239, 68, 68, 0.05); }
+
+        /* Add Modal */
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); backdrop-filter: blur(4px); z-index: 1000; display: none; align-items: center; justify-content: center; }
+        .modal.show { display: flex; }
+        .modal-content { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px; padding: 24px; width: 100%; max-width: 450px; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .modal-close { background: transparent; border: none; color: var(--text-secondary); font-size: 1.5em; cursor: pointer; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: 0.85em; color: var(--text-secondary); margin-bottom: 8px; font-weight: 600; }
+        .form-control { background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 10px; padding: 12px; width: 100%; color: var(--text-primary); outline: none; }
+        .form-control:focus { border-color: var(--accent-primary); }
+
+        .toast { position: fixed; bottom: 24px; right: 24px; background: var(--bg-card); border-left: 4px solid var(--accent-primary); padding: 16px 24px; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); z-index: 10000; display: none; animation: slideIn 0.3s ease-out; }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        .save-banner { position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%); background: var(--accent-primary); color: white; padding: 12px 32px; border-radius: 100px; display: none; align-items: center; gap: 24px; box-shadow: 0 10px 40px rgba(99, 102, 241, 0.4); z-index: 500; font-weight: 600; animation: bounceIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        @keyframes bounceIn { from { transform: translate(-50%, 100px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
+        .btn-save { background: white; color: var(--accent-primary); border: none; padding: 8px 24px; border-radius: 50px; font-weight: 700; cursor: pointer; font-size: 0.9em; }
+
+        /* Loader */
+        .spinner { width: 24px; height: 24px; border: 3px solid rgba(255,255,255,0.1); border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar">
+        <h1 onclick="window.location='/'"><span>✦</span> Ad Intelligence</h1>
+        <div class="nav-links">
+            <a href="/" class="nav-link">Dashboard</a>
+            <a href="/automation" class="nav-link active">Automation</a>
+            <a href="/system_prompt" class="nav-link">System Prompt</a>
+        </div>
+    </nav>
+
+    <main class="container">
+        
+        <div class="page-header">
+            <div class="page-title">
+                <h2>Automation Control</h2>
+                <p>Manage your scheduled scraping cycles and keyword testing rotation.</p>
+            </div>
+            <div class="master-toggle">
+                <label class="switch">
+                    <input type="checkbox" id="masterToggle" onchange="markUnsaved()">
+                    <span class="slider"></span>
+                </label>
+                <div style="font-size: 0.75em; text-align: center; margin-top: 4px; color: var(--text-secondary); font-weight: 700; text-transform: uppercase;">System State</div>
+            </div>
+        </div>
+
+        <div class="config-grid">
+            <!-- TikTok Config -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">🎵 TikTok Ads</div>
+                </div>
+                <div class="setting-row">
+                    <div class="setting-label">Frequency</div>
+                    <div class="input-group">
+                        <input type="number" id="tiktok_freq" value="24" min="1" onchange="markUnsaved()">
+                        <span>HRS</span>
+                    </div>
+                </div>
+                <div class="setting-row">
+                    <div class="setting-label">Daily Limit</div>
+                    <div class="input-group">
+                        <input type="number" id="tiktok_limit" value="20" min="1" onchange="markUnsaved()">
+                        <span>ADS</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- FB Config -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">📘 Facebook Ads</div>
+                </div>
+                <div class="setting-row">
+                    <div class="setting-label">Frequency</div>
+                    <div class="input-group">
+                        <input type="number" id="facebook_freq" value="48" min="1" onchange="markUnsaved()">
+                        <span>HRS</span>
+                    </div>
+                </div>
+                <div class="setting-row">
+                    <div class="setting-label">Daily Limit</div>
+                    <div class="input-group">
+                        <input type="number" id="facebook_limit" value="20" min="1" onchange="markUnsaved()">
+                        <span>ADS</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Amazon Config -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">📦 Amazon</div>
+                </div>
+                <div class="setting-row">
+                    <div class="setting-label">Frequency</div>
+                    <div class="input-group">
+                        <input type="number" id="amazon_freq" value="72" min="1" onchange="markUnsaved()">
+                        <span>HRS</span>
+                    </div>
+                </div>
+                <div class="setting-row">
+                    <div class="setting-label">Daily Limit</div>
+                    <div class="input-group">
+                        <input type="number" id="amazon_limit" value="20" min="1" onchange="markUnsaved()">
+                        <span>ITEMS</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Etsy Config -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">🛒 Etsy</div>
+                </div>
+                <div class="setting-row">
+                    <div class="setting-label">Frequency</div>
+                    <div class="input-group">
+                        <input type="number" id="etsy_freq" value="72" min="1" onchange="markUnsaved()">
+                        <span>HRS</span>
+                    </div>
+                </div>
+                <div class="setting-row">
+                    <div class="setting-label">Daily Limit</div>
+                    <div class="input-group">
+                        <input type="number" id="etsy_limit" value="20" min="1" onchange="markUnsaved()">
+                        <span>ITEMS</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <section class="keywords-panel">
+            <div class="panel-header">
+                <div style="display: flex; align-items: center; gap: 24px;">
+                    <h3 style="font-weight: 700;">Target Keywords</h3>
+                    <div class="search-box">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                        <input type="text" id="keywordSearch" placeholder="Filter keywords..." onkeyup="filterKeywords()">
+                    </div>
+                </div>
+                <button class="btn-add" onclick="showAddModal()">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    Add Keyword
+                </button>
+            </div>
+
+            <div class="table-container">
+                <table id="keywordsTable">
+                    <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th>Keyword</th>
+                            <th>TikTok</th>
+                            <th>Facebook</th>
+                            <th>Amazon</th>
+                            <th>Etsy</th>
+                            <th style="width: 50px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="keywordsBody">
+                        <!-- Content injected via JS -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Save Banner -->
+    <div class="save-banner" id="saveBanner">
+        <span>You have unsaved changes</span>
+        <button class="btn-save" id="saveBtn" onclick="saveSettings()">Save Changes</button>
+    </div>
+
+    <!-- Add Keyword Modal -->
+    <div class="modal" id="addModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 style="font-weight: 700;">Add New Keyword</h3>
+                <button class="modal-close" onclick="hideAddModal()">&times;</button>
+            </div>
+            <div class="form-group">
+                <label>Category</label>
+                <input type="text" id="newCategory" class="form-control" placeholder="e.g. Health, Tech...">
+            </div>
+            <div class="form-group">
+                <label>Keyword</label>
+                <input type="text" id="newKeyword" class="form-control" placeholder="e.g. AI generator...">
+            </div>
+            <div style="display: flex; gap: 12px; margin-top: 24px;">
+                <button class="btn-add" style="flex: 1; justify-content: center;" id="confirmAddBtn" onclick="addKeyword()">Add to List</button>
+                <button class="btn-delete" style="width: auto; padding: 0 16px; height: 42px;" onclick="hideAddModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script>
+        let automationSettings = {};
+        let allKeywords = [];
+        let hasUnsavedChanges = false;
+
+        async function loadSettings() {
+            try {
+                const resp = await fetch('/api/automation/settings');
+                automationSettings = await resp.json();
+                
+                document.getElementById('masterToggle').checked = automationSettings.is_active;
+                document.getElementById('tiktok_freq').value = automationSettings.tiktok_frequency_hours;
+                document.getElementById('tiktok_limit').value = automationSettings.tiktok_max_ads;
+                document.getElementById('facebook_freq').value = automationSettings.facebook_frequency_hours;
+                document.getElementById('facebook_limit').value = automationSettings.facebook_max_ads;
+                document.getElementById('amazon_freq').value = automationSettings.amazon_frequency_hours;
+                document.getElementById('amazon_limit').value = automationSettings.amazon_max_products;
+                document.getElementById('etsy_freq').value = automationSettings.etsy_frequency_hours;
+                document.getElementById('etsy_limit').value = automationSettings.etsy_max_products;
+            } catch (e) {
+                showToast("Error loading settings");
+            }
+        }
+
+        async function loadKeywords() {
+            try {
+                const resp = await fetch('/api/automation/keywords');
+                allKeywords = await resp.json();
+                renderKeywords();
+            } catch (e) {
+                showToast("Error loading keywords");
+            }
+        }
+
+        function renderKeywords() {
+            const body = document.getElementById('keywordsBody');
+            body.innerHTML = allKeywords.map(kw => {
+                return `
+                    <tr>
+                        <td><span class="category-tag">${kw.category}</span></td>
+                        <td style="font-weight: 600;">${kw.keyword}</td>
+                        <td>${renderStatus(kw.platforms?.tiktok)}</td>
+                        <td>${renderStatus(kw.platforms?.facebook)}</td>
+                        <td>${renderStatus(kw.platforms?.amazon)}</td>
+                        <td>${renderStatus(kw.platforms?.etsy)}</td>
+                        <td>
+                            <button class="btn-delete" onclick="deleteKeyword(${kw.id})">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function renderStatus(status) {
+            if (!status || status.status === 'pending') {
+                return `<div class="status-badge pending">Pending</div>`;
+            }
+            const icon = status.status === 'completed' ? '✓' : '✗';
+            const dateStr = status.last_tested ? new Date(status.last_tested).toLocaleDateString() : 'N/A';
+            return `
+                <div class="platform-status">
+                    <div class="status-badge ${status.status}">${icon} ${status.status}</div>
+                    <div class="last-date">${dateStr}</div>
+                </div>
+            `;
+        }
+
+        function filterKeywords() {
+            const term = document.getElementById('keywordSearch').value.toLowerCase();
+            const rows = document.querySelectorAll('#keywordsBody tr');
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(term) ? '' : 'none';
+            });
+        }
+
+        function markUnsaved() {
+            hasUnsavedChanges = true;
+            document.getElementById('saveBanner').style.display = 'flex';
+        }
+
+        async function saveSettings() {
+            const btn = document.getElementById('saveBtn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<div class="spinner"></div>';
+            btn.disabled = true;
+
+            const data = {
+                is_active: document.getElementById('masterToggle').checked,
+                tiktok_frequency_hours: parseInt(document.getElementById('tiktok_freq').value),
+                tiktok_max_ads: parseInt(document.getElementById('tiktok_limit').value),
+                facebook_frequency_hours: parseInt(document.getElementById('facebook_freq').value),
+                facebook_max_ads: parseInt(document.getElementById('facebook_limit').value),
+                amazon_frequency_hours: parseInt(document.getElementById('amazon_freq').value),
+                amazon_max_products: parseInt(document.getElementById('amazon_limit').value),
+                etsy_frequency_hours: parseInt(document.getElementById('etsy_freq').value),
+                etsy_max_products: parseInt(document.getElementById('etsy_limit').value)
+            };
+
+            try {
+                const resp = await fetch('/api/automation/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await resp.json();
+                if (result.success) {
+                    showToast("Settings saved successfully!");
+                    hasUnsavedChanges = false;
+                    document.getElementById('saveBanner').style.display = 'none';
+                }
+            } catch (e) {
+                showToast("Error saving settings");
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        function showAddModal() { document.getElementById('addModal').classList.add('show'); }
+        function hideAddModal() { document.getElementById('addModal').classList.remove('show'); }
+
+        async function addKeyword() {
+            const category = document.getElementById('newCategory').value;
+            const keyword = document.getElementById('newKeyword').value;
+            if (!category || !keyword) return;
+
+            const btn = document.getElementById('confirmAddBtn');
+            btn.disabled = true;
+
+            try {
+                const resp = await fetch('/api/automation/keywords', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ category, keyword })
+                });
+                const result = await resp.json();
+                if (result.success) {
+                    showToast("Keyword added");
+                    loadKeywords();
+                    hideAddModal();
+                    document.getElementById('newCategory').value = '';
+                    document.getElementById('newKeyword').value = '';
+                }
+            } catch (e) {
+                showToast("Error adding keyword");
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        async function deleteKeyword(id) {
+            if (!confirm("Are you sure you want to delete this keyword?")) return;
+            try {
+                const resp = await fetch(`/api/automation/keywords/${id}`, { method: 'DELETE' });
+                const result = await resp.json();
+                if (result.success) {
+                    showToast("Keyword deleted");
+                    loadKeywords();
+                }
+            } catch (e) {
+                showToast("Error deleting keyword");
+            }
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.style.display = 'block';
+            setTimeout(() => { toast.style.display = 'none'; }, 3000);
+        }
+
+        window.onload = () => {
+            loadSettings();
+            loadKeywords();
+        };
+    </script>
+</body>
+</html>
