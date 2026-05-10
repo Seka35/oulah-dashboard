@@ -5,8 +5,7 @@ Analysez les publicités TikTok et Facebook via Apify avec une interface Flask.
 ## Prérequis
 
 - Python 3.10+
-- PostgreSQL (ou SQLite pour test)
-- Clé API Apify
+- PostgreSQL (avec support Unix socket)
 - Git
 
 ## Installation
@@ -31,9 +30,22 @@ cp .env.example .env
 ## Configuration (.env)
 
 ```env
-APIFY_KEY=votre_cle_apify
-DATABASE_URL=postgresql://user:password@localhost:5432/ads_db
-FLASK_SECRET=your_secret_key_here
+# TikTok API
+TIKTOK_CLIENT_KEY=your_tiktok_client_key
+TIKTOK_CLIENT_SECRET=your_tiktok_client_secret
+
+# Facebook API
+FACEBOOK_ACCESS_TOKEN=your_facebook_access_token
+
+# Apify API
+APIFY_KEY=your_apify_api_key
+
+# Open Router (IA)
+OPENROUTER_KEY=your_openrouter_api_key
+MODEL_OPENROUTER=minimax/minimax-m2.7
+
+# Database PostgreSQL (Unix socket)
+DATABASE_URL=postgresql://user@/database_name
 ```
 
 ## Lancer l'application
@@ -59,9 +71,9 @@ L'application sera accessible sur `http://localhost:5000`
 ├── pipeline.py         # Pipeline de traitement
 ├── classifier.py       # Classification des produits
 ├── requirements.txt    # Dépendances Python
-├── static/             # Assets CSS/JS/media
+├── migrations/         # Migrations SQL
 ├── templates/          # Templates HTML
-└── migrations/         # Migrations SQL
+└── static/             # Assets CSS/JS/media
 ```
 
 ## Commandes utiles
@@ -73,8 +85,8 @@ tail -f app.log
 # Arrêter l'application
 pkill -f "python app.py"
 
-# Backup de la DB
-sqlite3 search_history.db ".backup full_db_backup.sql"
+# Se connecter à PostgreSQL
+psql -U anon-404 -d analyse_ad
 ```
 
 ## API Endpoints principaux
