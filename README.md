@@ -51,13 +51,17 @@ DATABASE_URL=postgresql://user@/database_name
 ## Lancer l'application
 
 ```bash
-# Mode développement
+# Activer le venv
 source .venv/bin/activate
+
+# Lancer Flask (dashboard)
 python app.py
 
-# Mode production (avec nohup)
-nohup python app.py > app.log 2>&1 &
+# Dans un autre terminal: lancer le worker pour download les médias
+python media_worker.py
 ```
+
+**Note:** `media_worker.py` doit tourner en parallèle pour download automatiquement les images/vidéos des publicités.
 
 L'application sera accessible sur `http://localhost:5000`
 
