@@ -5,14 +5,16 @@ import psycopg2
 from psycopg2.extras import DictCursor
 from dotenv import load_dotenv
 from concurrent.futures import ThreadPoolExecutor
-import json
+import tempfile
 
 load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://anon-404@localhost/analyse_ad")
-MEDIA_DIR = "static/media"
 MAX_RETRIES = 3
 MAX_THREADS = 10  # Parallel downloads
+
+# R2 Storage
+from r2_storage import upload_creative, get_creative_key, guess_content_type
 
 def get_db_connection():
     return psycopg2.connect(DATABASE_URL)
@@ -51,7 +53,6 @@ def download_file(url, local_path, headers=None):
         return None, None
     os.makedirs(os.path.dirname(local_path), exist_ok=True)
     try:
-        # TikTok URLs can be sensitive to session/cookies, but often just need a good UA and Referer
         response = requests.get(url, stream=True, timeout=60, headers=headers or {}, allow_redirects=True)
         response.raise_for_status()
         with open(local_path, 'wb') as f:
@@ -65,74 +66,97 @@ def download_file(url, local_path, headers=None):
         mime = response.headers.get('content-type', '')
         return size, mime
     except Exception as e:
-        # print(f"Error downloading {url}: {e}") # Silent unless needed
         if os.path.exists(local_path):
             os.remove(local_path)
         return None, None
 
 def process_single_fb(c):
+    """Download FB creative, upload to R2, store R2 URL in DB"""
     if not is_valid_url(c['original_url']):
         return
+
     ext = 'mp4' if 'video' in c['type'] else 'jpg'
-    filename = f"card_{c['id']}_{c['type']}.{ext}"
-    local_path = os.path.join(MEDIA_DIR, "fb", c['ad_archive_id'], filename)
-    
-    for attempt in range(MAX_RETRIES):
-        size, mime = download_file(c['original_url'], local_path, headers=HEADERS_FB)
-        if size:
-            try:
-                with psycopg2.connect(DATABASE_URL) as conn:
-                    with conn.cursor() as cursor:
-                        cursor.execute("""
-                            UPDATE ad_creatives 
-                            SET local_path = %s, downloaded_at = NOW(), file_size_bytes = %s, mime_type = %s 
-                            WHERE id = %s
-                        """, (local_path, size, mime, c['id']))
-                print(f"Downloaded FB creative {c['id']}")
-                return
-            except Exception as e:
-                print(f"DB error FB {c['id']}: {e}")
-        time.sleep(1)
-    
-    with psycopg2.connect(DATABASE_URL) as conn:
-        with conn.cursor() as cursor:
-            cursor.execute("UPDATE ad_creatives SET download_failed = TRUE WHERE id = %s", (c['id'],))
+    ad_id = c['ad_archive_id']
+
+    # Use temp file for download
+    with tempfile.NamedTemporaryFile(suffix=f'.{ext}', delete=False) as tmp:
+        local_path = tmp.name
+
+    try:
+        for attempt in range(MAX_RETRIES):
+            size, mime = download_file(c['original_url'], local_path, headers=HEADERS_FB)
+            if size:
+                # Generate R2 key and upload
+                creative_num = c.get('card_id') or c['id']
+                r2_key = get_creative_key('meta', ad_id, creative_num, ext)
+                content_type = guess_content_type(ext)
+
+                r2_url = upload_creative(local_path, r2_key, content_type)
+                if r2_url:
+                    with psycopg2.connect(DATABASE_URL) as conn:
+                        with conn.cursor() as cursor:
+                            cursor.execute("""
+                                UPDATE ad_creatives
+                                SET local_path = %s, downloaded_at = NOW(), file_size_bytes = %s, mime_type = %s
+                                WHERE id = %s
+                            """, (r2_url, size, mime, c['id']))
+                    print(f"[R2] FB creative {c['id']} -> {r2_url}")
+                    return
+            time.sleep(1)
+
+        with psycopg2.connect(DATABASE_URL) as conn:
+            with conn.cursor() as cursor:
+                cursor.execute("UPDATE ad_creatives SET download_failed = TRUE WHERE id = %s", (c['id'],))
+    finally:
+        if os.path.exists(local_path):
+            os.remove(local_path)
 
 def process_single_tiktok(m):
+    """Download TikTok media, upload to R2, store R2 URL in DB"""
     if not is_valid_url(m['original_url']):
         return
-    ext = 'mp4' if m['media_type'] == 'video' else 'jpg'
-    filename = f"{m['media_type']}_{m['media_index']}.{ext}"
-    local_path = os.path.join(MEDIA_DIR, "tiktok", m['ad_id'], filename)
-    
-    for attempt in range(MAX_RETRIES):
-        size, mime = download_file(m['original_url'], local_path, headers=HEADERS_TIKTOK)
-        if size:
-            try:
-                with psycopg2.connect(DATABASE_URL) as conn:
-                    with conn.cursor() as cursor:
-                        cursor.execute("""
-                            UPDATE tiktok_ad_media 
-                            SET local_path = %s, downloaded_at = NOW(), file_size_bytes = %s, mime_type = %s 
-                            WHERE id = %s
-                        """, (local_path, size, mime, m['id']))
-                print(f"Downloaded TikTok media {m['id']}")
-                return
-            except Exception as e:
-                print(f"DB error TikTok {m['id']}: {e}")
-        time.sleep(1)
 
-    with psycopg2.connect(DATABASE_URL) as conn:
-        with conn.cursor() as cursor:
-            cursor.execute("UPDATE tiktok_ad_media SET download_failed = TRUE WHERE id = %s", (m['id'],))
+    ext = 'mp4' if m['media_type'] == 'video' else 'jpg'
+    ad_id = m['ad_id']
+
+    with tempfile.NamedTemporaryFile(suffix=f'.{ext}', delete=False) as tmp:
+        local_path = tmp.name
+
+    try:
+        for attempt in range(MAX_RETRIES):
+            size, mime = download_file(m['original_url'], local_path, headers=HEADERS_TIKTOK)
+            if size:
+                creative_num = m.get('media_index') or m['id']
+                r2_key = get_creative_key('tiktok', ad_id, creative_num, ext)
+                content_type = guess_content_type(ext)
+
+                r2_url = upload_creative(local_path, r2_key, content_type)
+                if r2_url:
+                    with psycopg2.connect(DATABASE_URL) as conn:
+                        with conn.cursor() as cursor:
+                            cursor.execute("""
+                                UPDATE tiktok_ad_media
+                                SET local_path = %s, downloaded_at = NOW(), file_size_bytes = %s, mime_type = %s
+                                WHERE id = %s
+                            """, (r2_url, size, mime, m['id']))
+                    print(f"[R2] TikTok media {m['id']} -> {r2_url}")
+                    return
+            time.sleep(1)
+
+        with psycopg2.connect(DATABASE_URL) as conn:
+            with conn.cursor() as cursor:
+                cursor.execute("UPDATE tiktok_ad_media SET download_failed = TRUE WHERE id = %s", (m['id'],))
+    finally:
+        if os.path.exists(local_path):
+            os.remove(local_path)
 
 def process_fb_creatives():
     conn = get_db_connection()
     cursor = conn.cursor(cursor_factory=DictCursor)
     try:
         cursor.execute("""
-            SELECT id, ad_archive_id, type, original_url 
-            FROM ad_creatives 
+            SELECT id, ad_archive_id, type, original_url
+            FROM ad_creatives
             WHERE downloaded_at IS NULL AND download_failed = FALSE AND original_url IS NOT NULL
             LIMIT 50
         """)
@@ -149,8 +173,8 @@ def process_tiktok_media():
     cursor = conn.cursor(cursor_factory=DictCursor)
     try:
         cursor.execute("""
-            SELECT id, ad_id, media_index, media_type, original_url 
-            FROM tiktok_ad_media 
+            SELECT id, ad_id, media_index, media_type, original_url
+            FROM tiktok_ad_media
             WHERE downloaded_at IS NULL AND download_failed = FALSE AND original_url IS NOT NULL
             LIMIT 50
         """)
@@ -163,7 +187,7 @@ def process_tiktok_media():
         conn.close()
 
 def main():
-    print("Starting Media Downloader Worker...")
+    print("Starting Media Downloader Worker (R2 upload mode)...")
     while True:
         try:
             process_fb_creatives()

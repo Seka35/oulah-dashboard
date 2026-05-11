@@ -1,5 +1,6 @@
 import os
 import json
+import time
 import requests
 from dotenv import load_dotenv
 import db
@@ -17,7 +18,7 @@ Tu es un expert en détection de produits winners pour une machine qui :
 
 RÈGLES D'ANALYSE :
 
-1. COMPRENDS LE PRODUIT/OFFRE : 
+1. COMPRENDS LE PRODUIT/OFFRE :
    - Sur Amazon/Etsy : Utilise le titre + description. Les REVIEWS sont le signal #1 ( proxy des ventes). et surtout determine si le produit vendu est un produit digitaux.
    - Sur TikTok/Facebook : Utilise le texte de l'Ad et le nom de l'annonceur. Si l'ad est récente ou a peu de reach, analyse le POTENTIEL du concept créatif. et surtout determine si le produit vendu est un produit digitaux.
 
@@ -44,29 +45,66 @@ Pour chaque produit, réponds EXCLUSIVEMENT en JSON structuré respectant ce for
   "source_price": 0.0,
   "reviews_count": 0,
   "digital_product": "true|false",
-  
+
   "ai_analysis": {
     "what_is_it": "Description courte",
     "is_relevant": true,
     "relevance_reason": "Pourquoi c'est un bon signal",
     "skip_reason": null,
-    
+
     "digital_repackage_idea": "Description de l'idée digitale précise",
     "our_suggested_price": "$19-$39",
     "estimated_margin": "95%+",
     "production_effort": "LOW|MEDIUM|HIGH",
-    
+
     "demand_level": "LOW|MEDIUM|HIGH|MASSIVE",
     "demand_evidence": "Preuves (ex: 'Marque établie', '1500 reviews', 'Angle marketing fort')",
-    
+
     "priority": "LOW|MEDIUM|HIGH",
     "priority_reason": "Pourquoi cette priorité",
-    
+
     "suggested_concepts": ["Concept 1", "Concept 2"],
     "warnings": []
   }
 }
 """
+
+# Cache for system prompt (5 min TTL)
+_prompt_cache = {"text": None, "fetched_at": 0}
+CACHE_TTL_SECONDS = 300
+
+def get_active_system_prompt(prompt_key="product_analyzer"):
+    """Get active system prompt from DB, with 5-min cache"""
+    global _prompt_cache
+
+    now = time.time()
+    if _prompt_cache["text"] and (now - _prompt_cache["fetched_at"]) < CACHE_TTL_SECONDS:
+        return _prompt_cache["text"]
+
+    # Try to fetch from DB
+    try:
+        conn = db.get_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT prompt_text FROM system_prompts WHERE prompt_key = %s AND is_active = TRUE",
+            (prompt_key,)
+        )
+        row = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        if row and row[0]:
+            _prompt_cache = {"text": row[0], "fetched_at": now}
+            return row[0]
+    except Exception as e:
+        print(f"[ai_analyzer] Error fetching prompt from DB: {e}")
+
+    # Fallback to hardcoded
+    return SYSTEM_PROMPT
+
+def clear_prompt_cache():
+    """Clear the prompt cache (call after updating prompt)"""
+    global _prompt_cache
+    _prompt_cache = {"text": None, "fetched_at": 0}
 
 def analyze_product(product_data, platform):
     """
@@ -92,7 +130,7 @@ def analyze_product(product_data, platform):
             data=json.dumps({
                 "model": MODEL_NAME,
                 "messages": [
-                    {"role": "system", "content": db.get_setting("system_prompt", SYSTEM_PROMPT)},
+                    {"role": "system", "content": get_active_system_prompt()},
                     {"role": "user", "content": f"Analyze this product from {platform}: {json.dumps(product_data, indent=2)}"}
                 ],
                 "response_format": {"type": "json_object"}

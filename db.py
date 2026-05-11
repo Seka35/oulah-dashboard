@@ -19,6 +19,35 @@ def stringify(val):
         return json.dumps(val)
     return str(val)
 
+def is_r2_url(url):
+    """Check if URL is a Cloudflare R2 public URL"""
+    if not url or not isinstance(url, str):
+        return False
+    return url.startswith('http://') or url.startswith('https://')
+
+def get_media_url(local_path, platform="facebook", ad_id=None):
+    """
+    Get the correct media URL whether stored as local path or R2 URL.
+    Compatible with both local storage and R2 cloud storage.
+    """
+    if not local_path:
+        return ""
+
+    if is_r2_url(local_path):
+        return local_path  # Already a full R2 URL
+
+    # Local path format - construct frontend path
+    if platform == "facebook" and ad_id:
+        parts = local_path.split('/')
+        filename = parts[-1] if parts else local_path
+        return f"/media/fb/{ad_id}/{filename}"
+    elif platform == "tiktok" and ad_id:
+        parts = local_path.split('/')
+        filename = parts[-1] if parts else local_path
+        return f"/media/tiktok/{ad_id}/{filename}"
+
+    return f"/media/{local_path}"
+
 def init_db():
     # Execute schema.sql if needed, or assume it's run externally
     pass
@@ -784,7 +813,9 @@ def get_search_results(search_id):
         image_urls = []
         videos = []
         for c in creatives:
-            url = f"/media/fb/{archive_id}/{c['local_path'].split('/')[-1]}" if c['local_path'] else c['original_url']
+            url = get_media_url(c['local_path'], 'facebook', archive_id)
+            if not url:
+                url = c['original_url'] or ""
             if 'video' in c['type']:
                 videos.append({"url": url})
             else:
@@ -823,7 +854,9 @@ def get_search_results(search_id):
         image_urls = []
         videos = []
         for m in media:
-            url = f"/media/tiktok/{ad_id}/{m['local_path'].split('/')[-1]}" if m['local_path'] else m['original_url']
+            url = get_media_url(m['local_path'], 'tiktok', ad_id)
+            if not url:
+                url = m['original_url'] or ""
             if m['media_type'] == 'video':
                 videos.append({"url": url})
             else:
@@ -876,7 +909,9 @@ def get_all_raw_data(limit=5000):
             image_urls = []
             videos = []
             for c in creatives:
-                url = f"/media/fb/{archive_id}/{c['local_path'].split('/')[-1]}" if c['local_path'] else c['original_url']
+                url = get_media_url(c['local_path'], 'facebook', archive_id)
+                if not url:
+                    url = c['original_url'] or ""
                 if c['type'] and 'video' in c['type']:
                     videos.append({"url": url})
                 else:
@@ -926,7 +961,9 @@ def get_all_raw_data(limit=5000):
             image_urls = []
             videos = []
             for m in media:
-                url = f"/media/tiktok/{ad_id}/{m['local_path'].split('/')[-1]}" if m.get('local_path') else m['original_url']
+                url = get_media_url(m.get('local_path'), 'tiktok', ad_id)
+                if not url:
+                    url = m['original_url'] or ""
                 if m['media_type'] and 'video' in m['media_type']:
                     videos.append({"url": url})
                 else:
@@ -1510,13 +1547,13 @@ def save_ai_analysis(platform, external_id, analysis_result):
                 last_updated_at = CURRENT_TIMESTAMP
             WHERE {id_col} = %s
         """, (Json(analysis_result), str(external_id)))
-        
+
         # Also log to ai_analysis_log
         cursor.execute("""
             INSERT INTO ai_analysis_log (platform, external_id, verdict)
             VALUES (%s, %s, %s)
         """, (platform, str(external_id), Json(analysis_result)))
-        
+
         conn.commit()
         return True
     except Exception as e:
@@ -1556,14 +1593,13 @@ def get_product_metadata(platform, external_id):
         # Determine which timestamp columns to fetch
         created_col = 'created_at' if platform in ['facebook', 'fb', 'tiktok'] else 'first_seen_at'
         
-        cursor.execute(f"SELECT ai_analysis, last_updated_at, {created_col} as created_at, search_keywords FROM {table} WHERE {id_col} = %s", (str(external_id),))
+        cursor.execute(f"SELECT ai_analysis, last_updated_at, {created_col} as created_at FROM {table} WHERE {id_col} = %s", (str(external_id),))
         row = cursor.fetchone()
         if row:
             return {
                 "ai_analysis": row['ai_analysis'],
                 "last_updated_at": row['last_updated_at'].isoformat() if row['last_updated_at'] else None,
-                "created_at": row['created_at'].isoformat() if row['created_at'] else None,
-                "search_keywords": row['search_keywords'] or []
+                "created_at": row['created_at'].isoformat() if row['created_at'] else None
             }
         return None
     finally:
@@ -1725,6 +1761,221 @@ def get_next_keyword_for_platform(platform):
         """, (platform,))
         row = cursor.fetchone()
         return dict(row) if row else None
+    finally:
+        cursor.close()
+        conn.close()
+
+# ================================================
+# PRODUCTS TABLE (Scraping pipeline)
+# ================================================
+
+def save_product_from_scraping(ai_result, platform, source_ad_id, source_tag=""):
+    """
+    Insert or update a product after AI analysis during scraping.
+    Called by pipeline after ai_analyzer.analyze_product().
+
+    Args:
+        ai_result: Dict from ai_analyzer (with ai_analysis nested)
+        platform: 'facebook', 'tiktok', 'etsy', 'amazon'
+        source_ad_id: ad_archive_id or ad_id
+        source_tag: keyword that triggered the scrape
+
+    Returns:
+        product id or None
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        analysis = ai_result.get('ai_analysis', ai_result)
+        if not analysis:
+            analysis = ai_result
+
+        platform_map = {'facebook': 'meta', 'tiktok': 'tiktok'}
+        store_platform = platform_map.get(platform, platform)
+
+        product_name = ai_result.get('product_name', '') or analysis.get('what_is_it', '') or ''
+        niche = analysis.get('product_category', '') or analysis.get('niche', '') or ''
+        what_is_it = analysis.get('what_is_it', '')
+        relevance_reason = analysis.get('relevance_reason', '')
+        repackage_idea = analysis.get('digital_repackage_idea', '')
+        demand_level = analysis.get('demand_level', 'MEDIUM')
+        production_effort = analysis.get('production_effort', 'MEDIUM')
+        verdict_priority = analysis.get('priority', 'MEDIUM')
+        suggested_concepts = analysis.get('suggested_concepts', [])
+        warnings = analysis.get('warnings', [])
+
+        price_text = analysis.get('our_suggested_price', '')
+        price_min = None
+        price_max = None
+        if price_text:
+            import re
+            matches = re.findall(r'\$?([\d]+)', price_text.replace(',', ''))
+            if len(matches) >= 2:
+                price_min = float(matches[0])
+                price_max = float(matches[1])
+            elif len(matches) == 1:
+                price_min = float(matches[0])
+                price_max = price_min
+
+        cursor.execute("""
+            INSERT INTO products (
+                name, niche, status, origin_type, source_ad_id, source_platform, source_tag,
+                what_is_it, repackage_idea, demand_level, production_effort,
+                suggested_price_min, suggested_price_max,
+                relevance_reason, suggested_ad_concepts, warnings, verdict_priority,
+                scaling_score, ad_count, days_active
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ON CONFLICT (source_platform, source_ad_id) DO UPDATE SET
+                name = COALESCE(EXCLUDED.name, products.name),
+                what_is_it = COALESCE(EXCLUDED.what_is_it, products.what_is_it),
+                repackage_idea = COALESCE(EXCLUDED.repackage_idea, products.repackage_idea),
+                demand_level = COALESCE(EXCLUDED.demand_level, products.demand_level),
+                verdict_priority = COALESCE(EXCLUDED.verdict_priority, products.verdict_priority),
+                updated_at = CURRENT_TIMESTAMP
+            RETURNING id
+        """, (
+            product_name,
+            niche,
+            'scraping_pending',
+            'scrape',
+            str(source_ad_id),
+            store_platform,
+            source_tag,
+            what_is_it,
+            repackage_idea,
+            demand_level,
+            production_effort,
+            price_min,
+            price_max,
+            relevance_reason,
+            Json(suggested_concepts),
+            Json(warnings),
+            verdict_priority,
+            0,  # scaling_score
+            0,  # ad_count
+            0   # days_active
+        ))
+
+        conn.commit()
+        result = cursor.fetchone()
+        return str(result[0]) if result else None
+    except Exception as e:
+        conn.rollback()
+        print(f"Error saving product from scraping: {e}")
+        return None
+    finally:
+        cursor.close()
+        conn.close()
+
+def get_products(status=None, platform=None, limit=100):
+    """Get products for dashboard"""
+    conn = get_connection()
+    cursor = conn.cursor(cursor_factory=DictCursor)
+    try:
+        query = "SELECT * FROM products WHERE 1=1"
+        params = []
+        if status:
+            query += " AND status = %s"
+            params.append(status)
+        if platform:
+            query += " AND source_platform = %s"
+            params.append(platform)
+        query += " ORDER BY created_at DESC LIMIT %s"
+        params.append(limit)
+        cursor.execute(query, params)
+        return [dict(r) for r in cursor.fetchall()]
+    finally:
+        cursor.close()
+        conn.close()
+
+def update_product_status(source_platform, source_ad_id, status):
+    """Update product status"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            UPDATE products SET status = %s, updated_at = CURRENT_TIMESTAMP
+            WHERE source_platform = %s AND source_ad_id = %s
+        """, (status, source_platform, str(source_ad_id)))
+        conn.commit()
+        return cursor.rowcount > 0
+    finally:
+        cursor.close()
+        conn.close()
+
+def add_product_tag(source_platform, source_ad_id, tag):
+    """Add a tag to a product"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT id FROM products WHERE source_platform = %s AND source_ad_id = %s", (source_platform, str(source_ad_id)))
+        row = cursor.fetchone()
+        if not row:
+            return False
+        product_id = row[0]
+        cursor.execute("""
+            INSERT INTO product_tags (product_id, tag) VALUES (%s, %s)
+            ON CONFLICT (product_id, tag) DO NOTHING
+        """, (product_id, tag))
+        conn.commit()
+        return True
+    except Exception as e:
+        conn.rollback()
+        print(f"Error adding product tag: {e}")
+        return False
+    finally:
+        cursor.close()
+        conn.close()
+
+def get_product_tags(source_platform, source_ad_id):
+    """Get all tags for a product"""
+    conn = get_connection()
+    cursor = conn.cursor(cursor_factory=DictCursor)
+    try:
+        cursor.execute("""
+            SELECT t.tag, t.created_at
+            FROM product_tags t
+            JOIN products p ON t.product_id = p.id
+            WHERE p.source_platform = %s AND p.source_ad_id = %s
+            ORDER BY t.created_at
+        """, (source_platform, str(source_ad_id)))
+        return [r['tag'] for r in cursor.fetchall()]
+    finally:
+        cursor.close()
+        conn.close()
+
+def save_product_after_analysis(platform, source_ad_id, ai_result, source_tag=""):
+    """
+    Wrapper to save a product after AI analysis.
+    Call this from the pipeline after save_ai_analysis().
+
+    Args:
+        platform: 'facebook', 'tiktok', etc.
+        source_ad_id: ad_archive_id or ad_id
+        ai_result: full AI analysis result dict
+        source_tag: keyword that triggered the scrape
+    """
+    try:
+        save_product_from_scraping(ai_result, platform, source_ad_id, source_tag)
+    except Exception as e:
+        print(f"Warning: could not save product after analysis: {e}")
+
+def save_system_prompt_history(previous_value, new_value):
+    """Save system prompt change history"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            INSERT INTO system_prompt_history (previous_value, new_value)
+            VALUES (%s, %s)
+        """, (previous_value, new_value))
+        conn.commit()
+        return True
+    except Exception as e:
+        conn.rollback()
+        print(f"Error saving system prompt history: {e}")
+        return False
     finally:
         cursor.close()
         conn.close()

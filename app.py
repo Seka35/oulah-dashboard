@@ -349,14 +349,19 @@ def api_search():
             plt = it.get("platform")
             iid = it.get("id") or it.get("asin") or it.get("listing_id")
             if not it.get("ai_analysis"):
+                print(f"🤖 [AI] Analyzing {plt}/{iid}...")
                 res = ai_analyzer.analyze_product(it.get("_raw", it), plt)
                 if res and "error" not in res:
-                    save_ai_analysis(plt, iid, res)
+                    ok = save_ai_analysis(plt, iid, res)
+                    print(f"✅ [AI] Saved {plt}/{iid} -> ai_analysis: {ok}")
                     it["ai_analysis"] = res
+                else:
+                    print(f"❌ [AI] Failed {plt}/{iid}: {res.get('error') if res else 'no response'}")
             return it
 
         with ThreadPoolExecutor(max_workers=8) as ai_executor:
-            list(ai_executor.map(analyze_and_save, all_to_analyze))
+            results = list(ai_executor.map(analyze_and_save, all_to_analyze))
+        print(f"✅ [Auto-Analyze] Done. Processed {len(results)} items.")
 
     # Stats
     stats = {
@@ -888,8 +893,19 @@ def api_update_system_prompt():
     new_prompt = data.get("system_prompt")
     if not new_prompt:
         return jsonify({"error": "Prompt cannot be empty"}), 400
-    
+
+    # Get previous value for history
+    previous = db.get_setting("system_prompt", "")
+    if previous and previous != new_prompt:
+        db.save_system_prompt_history(previous, new_prompt)
+
     success = db.set_setting("system_prompt", new_prompt)
+    # Also update in system_prompts table if exists
+    try:
+        import ai_analyzer
+        ai_analyzer.clear_prompt_cache()
+    except:
+        pass
     return jsonify({"success": success})
 
 if __name__ == "__main__":
