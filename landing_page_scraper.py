@@ -2,6 +2,7 @@
 Landing Page Scraper
 Downloads and stores landing pages from Facebook ads (link_url).
 Inlines CSS, JS, and downloads images for offline viewing.
+Uses Playwright for JavaScript-rendered pages (SPAs like Zalando).
 """
 
 import os
@@ -99,9 +100,96 @@ def download_file(url, timeout=10):
     return None, None
 
 
+def scrape_with_playwright(url, output_dir, timeout=30):
+    """
+    Scrape a page using Playwright (headless Chrome) to handle JavaScript-rendered pages.
+    Returns (html_content, metadata) or (None, error_message)
+    """
+    try:
+        from playwright.sync_api import sync_playwright
+
+        metadata = {
+            'headline': None,
+            'price_text': None,
+            'price_amount': None,
+            'currency': 'USD',
+            'checkout_type': None,
+        }
+
+        html_content = None
+
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            context = browser.new_context(
+                user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+                viewport={'width': 1920, 'height': 1080},
+            )
+            page = context.new_page()
+
+            # Set timeout for navigation
+            page.set_default_timeout(timeout * 1000)
+
+            try:
+                # Navigate and wait for network to be idle
+                page.goto(url, wait_until='networkidle', timeout=timeout * 1000)
+
+                # Wait a bit more for any lazy-loaded content
+                page.wait_for_timeout(2000)
+
+                # Get the fully rendered HTML
+                html_content = page.content()
+
+                # Extract metadata
+                metadata['headline'] = page.title()
+
+                # Try to get price
+                try:
+                    # Look for common price patterns
+                    price_elem = page.locator('[class*="price"], [class*="Price"], [data-testid*="price"], .sale-price, .original-price').first
+                    if price_elem.count() > 0:
+                        price_text = price_elem.inner_text()
+                        if price_text:
+                            metadata['price_text'] = price_text.strip()
+                            nums = re.findall(r'[\d,]+(?:\.\d+)?', price_text)
+                            if nums:
+                                metadata['price_amount'] = float(nums[0].replace(',', ''))
+                except:
+                    pass
+
+                # Detect checkout platform
+                html_lower = html_content.lower()
+                checkouts = {
+                    'stripe': ['stripe', 'js.stripe.com', 'checkout.stripe.com'],
+                    'gumroad': ['gumroad', 'gum.co', 'gumroad.com/l/'],
+                    'paddle': ['paddle', 'paddle.com', 'cdn.paddle.com'],
+                    'shopify': ['shopify', 'cdn.shopify.com', '_shopify_dismiss'],
+                    'woocommerce': ['woocommerce', 'wp-content/plugins/woocommerce'],
+                    'systeme': ['systeme.io', 'systeme.fr'],
+                    'kajabi': ['kajabi', 'cdn.kajabi.com'],
+                }
+                for platform, signatures in checkouts.items():
+                    if any(sig in html_lower for sig in signatures):
+                        metadata['checkout_type'] = platform
+                        break
+
+            except Exception as e:
+                browser.close()
+                return None, f"Playwright navigation error: {str(e)[:50]}"
+
+            browser.close()
+
+        return html_content, metadata
+
+    except ImportError:
+        return None, "Playwright not installed. Run: pip install playwright && playwright install chromium"
+    except Exception as e:
+        return None, f"Playwright error: {str(e)[:50]}"
+
+
 def scrape_landing_page(ad_archive_id, url, output_dir=None):
     """
     Scrape a landing page and save it locally.
+    Uses Playwright for SPA pages, falls back to requests for simple pages.
     Returns metadata dict.
     """
     result = {
@@ -131,57 +219,80 @@ def scrape_landing_page(ad_archive_id, url, output_dir=None):
     os.makedirs(output_dir, exist_ok=True)
 
     result['local_assets_path'] = output_dir
+    parsed_url = urlparse(url)
+    result['domain'] = parsed_url.netloc.replace('www.', '')
 
     try:
-        # Fetch the page
-        resp = requests.get(url, headers=HEADERS, timeout=30, allow_redirects=True)
-        if resp.status_code != 200:
-            result['status'] = 'failed'
-            result['scrape_error'] = f'HTTP {resp.status_code}'
-            return result
+        # First try with requests (fast, works for simple pages)
+        resp = requests.get(url, headers=HEADERS, timeout=15, allow_redirects=True)
+        simple_html = resp.text if resp.status_code == 200 else ""
+        is_spa = len(simple_html) < 5000 or 'id="__NEXT_DATA__"' in simple_html or 'data-nextjs-data' in simple_html
 
-        html = resp.text
-        parsed_url = urlparse(url)
-        result['domain'] = parsed_url.netloc.replace('www.', '')
+        # Use Playwright for SPAs and pages that seem to need JavaScript rendering
+        if is_spa or len(simple_html) < 10000:
+            print(f"  🕷️ Using Playwright for {url}...")
+            html_content, pw_metadata = scrape_with_playwright(url, output_dir, timeout=30)
+            if html_content:
+                result['headline'] = pw_metadata.get('headline') or result['headline']
+                result['price_text'] = pw_metadata.get('price_text') or result['price_text']
+                result['price_amount'] = pw_metadata.get('price_amount') or result['price_amount']
+                result['checkout_type'] = pw_metadata.get('checkout_type') or result['checkout_type']
+            elif pw_metadata:
+                # Playwright failed, try with simple HTML at least
+                if simple_html:
+                    print(f"  ⚠️ Playwright failed ({pw_metadata}), using simple HTML fallback")
+                    html_content = simple_html
+                else:
+                    result['status'] = 'failed'
+                    result['scrape_error'] = pw_metadata
+                    return result
+            else:
+                result['status'] = 'failed'
+                result['scrape_error'] = 'No content received'
+                return result
+        else:
+            html_content = simple_html
 
         # Parse HTML
-        soup = BeautifulSoup(html, 'lxml')
+        soup = BeautifulSoup(html_content, 'lxml')
 
-        # Extract metadata
-        og_title = soup.find('meta', property='og:title')
-        title_tag = soup.find('title')
-        result['headline'] = og_title['content'].strip() if og_title and og_title.get('content') else (title_tag.get_text(strip=True)[:200] if title_tag else None)
+        # Extract metadata if not already set
+        if not result['headline']:
+            og_title = soup.find('meta', property='og:title')
+            title_tag = soup.find('title')
+            result['headline'] = og_title['content'].strip() if og_title and og_title.get('content') else (title_tag.get_text(strip=True)[:200] if title_tag else None)
 
         # Price extraction
-        price_match = re.search(r'[\$€£¥]\s*[\d,]+(?:\.\d{2})?', html)
-        if price_match:
-            result['price_text'] = price_match.group(0)
-            nums = re.findall(r'[\d,]+(?:\.\d+)?', price_match.group(0))
-            if nums:
-                result['price_amount'] = float(nums[0].replace(',', ''))
-                if '€' in price_match.group(0):
-                    result['currency'] = 'EUR'
-                elif '£' in price_match.group(0):
-                    result['currency'] = 'GBP'
+        if not result['price_text']:
+            price_match = re.search(r'[\$€£¥]\s*[\d,]+(?:\.\d{2})?|[\d,]+(?:\.\d{2})?\s*(?:USD|EUR|GBP|\$|€|£)', html_content)
+            if price_match:
+                result['price_text'] = price_match.group(0)
+                nums = re.findall(r'[\d,]+(?:\.\d+)?', price_match.group(0))
+                if nums:
+                    result['price_amount'] = float(nums[0].replace(',', ''))
+                    if '€' in price_match.group(0):
+                        result['currency'] = 'EUR'
+                    elif '£' in price_match.group(0):
+                        result['currency'] = 'GBP'
 
         # Checkout detection
-        html_lower = html.lower()
-        checkouts = {
-            'stripe': ['stripe', 'js.stripe.com', 'checkout.stripe.com'],
-            'gumroad': ['gumroad', 'gum.co', 'gumroad.com/l/'],
-            'paddle': ['paddle', 'paddle.com', 'cdn.paddle.com'],
-            'shopify': ['shopify', 'cdn.shopify.com'],
-            'woocommerce': ['woocommerce', 'wp-content/plugins/woocommerce'],
-            'systeme': ['systeme.io', 'systeme.fr'],
-            'kajabi': ['kajabi', 'cdn.kajabi.com'],
-            'gumroad_embed': ['gumroad.com/embed'],
-        }
-        for platform, signatures in checkouts.items():
-            if any(sig in html_lower for sig in signatures):
-                result['checkout_type'] = platform
-                break
+        if not result['checkout_type']:
+            html_lower = html_content.lower()
+            checkouts = {
+                'stripe': ['stripe', 'js.stripe.com', 'checkout.stripe.com'],
+                'gumroad': ['gumroad', 'gum.co', 'gumroad.com/l/'],
+                'paddle': ['paddle', 'paddle.com', 'cdn.paddle.com'],
+                'shopify': ['shopify', 'cdn.shopify.com'],
+                'woocommerce': ['woocommerce', 'wp-content/plugins/woocommerce'],
+                'systeme': ['systeme.io', 'systeme.fr'],
+                'kajabi': ['kajabi', 'cdn.kajabi.com'],
+            }
+            for platform, signatures in checkouts.items():
+                if any(sig in html_lower for sig in signatures):
+                    result['checkout_type'] = platform
+                    break
 
-        # Download and inline assets
+        # Download and inline assets (only for small images, skip for now with Playwright)
         asset_count = 0
 
         # Images - inline small images as base64
@@ -191,34 +302,13 @@ def scrape_landing_page(ad_archive_id, url, output_dir=None):
                 continue
             img_url = urljoin(url, src)
             content, mime = download_file(img_url)
-            if content and mime and len(content) < 500000:  # Max 500KB for inlining
-                b64 = base64.b64encode(content).decode()
-                img['src'] = f"data:{mime};base64,{b64}"
-                asset_count += 1
-
-        # CSS - inline external stylesheets
-        for link in soup.find_all('link', rel='stylesheet'):
-            href = link.get('href')
-            if not href:
-                continue
-            css_url = urljoin(url, href)
-            content, _ = download_file(css_url)
-            if content:
-                style = soup.new_tag('style')
-                style.string = content.decode('utf-8', errors='ignore')
-                link.replace_with(style)
-                asset_count += 1
-
-        # JS - download external scripts
-        for script in soup.find_all('script', src=True):
-            src = script.get('src')
-            js_url = urljoin(url, src)
-            content, _ = download_file(js_url)
-            if content:
-                new_script = soup.new_tag('script')
-                new_script.string = content.decode('utf-8', errors='ignore')
-                script.replace_with(new_script)
-                asset_count += 1
+            if content and mime and len(content) < 300000:  # Max 300KB for inlining
+                try:
+                    b64 = base64.b64encode(content).decode()
+                    img['src'] = f"data:{mime};base64,{b64}"
+                    asset_count += 1
+                except:
+                    pass
 
         # Save HTML
         html_path = os.path.join(output_dir, 'index.html')
@@ -229,7 +319,7 @@ def scrape_landing_page(ad_archive_id, url, output_dir=None):
         # Store first 50k of html for DB
         result['scraped_html'] = str(soup)[:50000]
         result['status'] = 'scraped'
-        print(f"  ✓ Scraped {url} - {asset_count} assets inlined")
+        print(f"  ✓ Scraped {url} - {asset_count} images inlined")
 
     except requests.Timeout:
         result['status'] = 'failed'
@@ -302,7 +392,8 @@ def create_download_zip(ad_archive_id, output_dir=None):
 if __name__ == '__main__':
     # Test
     test_items = [
-        {'ad_archive_id': 'test123', 'link_url': 'https://example.com'}
+        {'ad_archive_id': 'test123', 'link_url': 'https://example.com'},
+        {'ad_archive_id': 'zalando_test', 'link_url': 'https://www.zalando.de/swedemount-lofoten-stretch-zip-off-stoffhose-black-charcoal-00e21a01c-q11.html'}
     ]
     for item in test_items:
         result = scrape_landing_page(item['ad_archive_id'], item['link_url'])
