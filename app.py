@@ -319,7 +319,7 @@ def api_search():
 
         for page_id in page_ids:
             try:
-                result, err = search_facebook_by_advertiser([page_id], 50)
+                result, err = search_facebook_by_advertiser([page_id], 200)
                 if err:
                     print(f"⚠️ Advertiser {page_id}: {err}")
                 elif result and page_id in result:
