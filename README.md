@@ -4,12 +4,31 @@ Analysez les publicités TikTok et Facebook via Apify avec une interface Flask.
 
 ## Prérequis
 
-- Python 3.10+
+- Python 3.10+ **ou** Docker & Docker Compose
 - PostgreSQL (Neon ou local)
 - Git
 - Cloudflare R2 (stockage média)
 
 ## Installation
+
+### Option 1: Docker (recommandé pour VPS)
+
+```bash
+# Cloner le repo
+git clone https://github.com/Seka35/oulah-dashboard.git
+cd oulah-dashboard
+
+# Configurer l'environnement
+cp .env.example .env
+# Éditez .env avec vos clés API
+
+# Lancer avec Docker Compose
+docker-compose up -d
+```
+
+L'application sera accessible sur `http://localhost:5000`
+
+### Option 2: Local (développement)
 
 ```bash
 # Cloner le repo
@@ -53,6 +72,18 @@ R2_PUBLIC_URL=https://pub-xxxx.r2.dev
 
 ## Lancer l'application
 
+### Docker
+
+```bash
+# Voir les logs
+docker-compose logs -f
+
+# Arrêter
+docker-compose down
+```
+
+### Local
+
 ```bash
 # Activer le venv
 source .venv/bin/activate
@@ -69,8 +100,6 @@ python pipeline.py
 
 **Note:** `media_worker.py` doit tourner en parallèle pour download automatiquement les images/vidéos et les uploader vers Cloudflare R2.
 
-L'application sera accessible sur `http://localhost:5000`
-
 ## Structure du projet
 
 ```
@@ -82,19 +111,39 @@ L'application sera accessible sur `http://localhost:5000`
 ├── classifier.py       # Classification des produits
 ├── r2_storage.py       # Intégration Cloudflare R2
 ├── media_worker.py     # Worker download/upload média
+├── landing_page_scraper.py  # Scraping landing pages (Playwright)
 ├── requirements.txt    # Dépendances Python
+├── Dockerfile          # Image Docker
+├── docker-compose.yml   # Orchestration Docker
 ├── migrations/         # Migrations SQL
 ├── templates/          # Templates HTML
 └── static/             # Assets CSS/JS
 ```
 
+## Fonctionnalités
+
+### Scraping Landing Pages
+Les landing pages des publicités Facebook sont scrapées automatiquement avec Playwright (headless Chrome) pour gérer les sites JavaScript (SPAs comme Zalando, Shein, etc.). Les pages sont:
+- Stockées localement dans `static/landing_pages/`
+- Uploadées sur R2 pour un accès public
+- Affichables dans le modal produit
+- Téléchargeables en ZIP
+
+### Scraping Créatives
+Les images et vidéos des publicités sont téléchargées et uploadées vers Cloudflare R2 avec la structure:
+- `scrape/meta/<ad_archive_id>/creative-1.jpg`
+- `scrape/tiktok/<ad_id>/creative-1.mp4`
+
 ## Commandes utiles
 
 ```bash
-# Voir les logs
+# Voir les logs (Docker)
+docker-compose logs -f
+
+# Voir les logs (local)
 tail -f app.log
 
-# Arrêter l'application
+# Arrêter l'application (local)
 pkill -f "python app.py"
 
 # Exécuter les migrations SQL sur Neon
@@ -110,11 +159,15 @@ psql $DATABASE_URL -f migrations/004_products_and_settings.sql
 - `GET /api/opportunities` - Opportunités produits
 - `GET /api/products` - Produits du pipeline scraping
 - `POST /api/products/<opportunity_id>/tag` - Ajouter un tag à un produit
+- `POST /api/ads/<ad_archive_id>/scrape-landing-page` - Scraper une landing page
+- `GET /api/ads/<ad_archive_id>/landing-page` - Récupérer info landing page
+- `GET /api/ads/<ad_archive_id>/landing-page/download` - Télécharger ZIP
 
 ## Workflow
 
 1. **Scraping**: Apify récupère les ads TikTok/FB/Etsy/Amazon
 2. **Download**: `media_worker.py` download les créatives → upload vers R2
-3. **AI Analysis**: `ai_analyzer.py` analyse chaque produit
-4. **Pipeline**: `pipeline.py` classifie et crée les opportunités
-5. **Dashboard**: Frontend affiche via les API endpoints
+3. **Landing Pages**: `landing_page_scraper.py` scrapes les landing pages avec Playwright → upload vers R2
+4. **AI Analysis**: `ai_analyzer.py` analyse chaque produit
+5. **Pipeline**: `pipeline.py` classifie et crée les opportunités
+6. **Dashboard**: Frontend affiche via les API endpoints
