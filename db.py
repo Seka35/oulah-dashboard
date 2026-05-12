@@ -649,6 +649,88 @@ def _save_facebook_ad(cursor, search_id, ad, raw, search_keyword=""):
                 """, (eu_targeting_id, country, ag.get("age_range"), ag.get("male"), ag.get("female"), ag.get("unknown")))
 
 
+def save_fb_advertiser_ads(ads_by_page):
+    """
+    Save Facebook ads retrieved by advertiser page ID.
+    ads_by_page: dict with page_id -> list of ad entries from search_facebook_by_advertiser()
+    Returns: number of ads saved
+    """
+    if not ads_by_page:
+        return 0
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    saved = 0
+    try:
+        for page_id, ads in ads_by_page.items():
+            for ad in ads:
+                ad_id = str(ad.get("id", "") or ad.get("ad_id", ""))
+                if not ad_id:
+                    continue
+
+                platforms = ad.get("platforms", [])
+                if isinstance(platforms, list):
+                    platforms = Json(platforms)
+
+                scraped_at = ad.get("scraped_at", "")
+                if scraped_at:
+                    try:
+                        scraped_at = datetime.strptime(scraped_at, "%Y-%m-%dT%H:%M:%S.%fZ")
+                    except:
+                        try:
+                            scraped_at = datetime.strptime(scraped_at, "%Y-%m-%dT%H:%M:%S.%f")
+                        except:
+                            scraped_at = None
+
+                cursor.execute("""
+                    INSERT INTO fb_advertiser_ads
+                    (page_id, ad_id, ad_url, page_name, title, text, media_type,
+                     primary_thumbnail, is_active, page_likes, platforms,
+                     start_date, end_date, ad_category, scraped_at, raw_json)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (page_id, ad_id) DO UPDATE SET
+                        ad_url = EXCLUDED.ad_url,
+                        title = EXCLUDED.title,
+                        text = EXCLUDED.text,
+                        media_type = EXCLUDED.media_type,
+                        primary_thumbnail = EXCLUDED.primary_thumbnail,
+                        is_active = EXCLUDED.is_active,
+                        page_likes = EXCLUDED.page_likes,
+                        platforms = EXCLUDED.platforms,
+                        start_date = EXCLUDED.start_date,
+                        end_date = EXCLUDED.end_date,
+                        ad_category = EXCLUDED.ad_category,
+                        scraped_at = EXCLUDED.scraped_at,
+                        raw_json = EXCLUDED.raw_json
+                """, (
+                    page_id,
+                    ad_id,
+                    ad.get("ad_url", ""),
+                    ad.get("page_name", ""),
+                    ad.get("title", ""),
+                    ad.get("text", ""),
+                    ad.get("media_type", "image"),
+                    ad.get("primary_thumbnail", ""),
+                    ad.get("is_active", True),
+                    ad.get("page_likes", 0),
+                    platforms,
+                    ad.get("start_date", ""),
+                    ad.get("end_date", ""),
+                    ad.get("ad_category", "UNKNOWN"),
+                    scraped_at,
+                    Json(ad.get("_raw", ad))
+                ))
+                saved += 1
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        print(f"Error saving fb_advertiser_ads: {e}")
+    finally:
+        cursor.close()
+        conn.close()
+    return saved
+
+
 def _save_tiktok_ad(cursor, search_id, ad, raw, search_keyword=""):
     tiktok_id = str(raw.get("AD ID") or ad.get("id", ""))
     if not tiktok_id: return
@@ -772,6 +854,46 @@ def get_search_history(limit=20):
     cursor.close()
     conn.close()
     return [dict(r) for r in rows]
+
+
+def get_fb_advertiser_ads(page_id, limit=200):
+    """
+    Get all Facebook ads for a specific advertiser page_id.
+    Returns: list of ads from fb_advertiser_ads table
+    """
+    conn = get_connection()
+    cursor = conn.cursor(cursor_factory=DictCursor)
+    try:
+        cursor.execute("""
+            SELECT * FROM fb_advertiser_ads
+            WHERE page_id = %s
+            ORDER BY scraped_at DESC
+            LIMIT %s
+        """, (str(page_id), limit))
+        return [dict(r) for r in cursor.fetchall()]
+    finally:
+        cursor.close()
+        conn.close()
+
+
+def get_all_fb_advertiser_counts():
+    """
+    Get ad count for all advertisers that have ads in fb_advertiser_ads.
+    Returns: dict with page_id -> ad_count
+    """
+    conn = get_connection()
+    cursor = conn.cursor(cursor_factory=DictCursor)
+    try:
+        cursor.execute("""
+            SELECT page_id, COUNT(*) as ad_count
+            FROM fb_advertiser_ads
+            GROUP BY page_id
+        """)
+        return {str(row['page_id']): row['ad_count'] for row in cursor.fetchall()}
+    finally:
+        cursor.close()
+        conn.close()
+
 
 def get_search_results(search_id):
     conn = get_connection()

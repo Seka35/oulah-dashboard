@@ -13,6 +13,7 @@ APIFY_KEY = os.getenv("APIFY_KEY")
 # Apify Actor IDs
 TIKTOK_ACTOR = "data_xplorer~tiktok-ads-library-fast"
 FACEBOOK_ACTOR = "curious_coder~facebook-ads-library-scraper"
+FACEBOOK_ADVERTISER_ACTOR = "20nRTxLD3a3jIlZbZ"  # facebook-ads-scraper-pro
 ETSY_ACTOR = "JOUStaVgex0lqbRnk"
 AMAZON_ACTOR = "junglee~Amazon-crawler"
 
@@ -182,6 +183,70 @@ def search_facebook(search_term, country="ALL", max_ads=20):
         }
         ads.append(ad_entry)
     return ads, None
+
+def search_facebook_by_advertiser(page_ids, max_results_per_query=200):
+    """
+    Search Facebook ads by advertiser page IDs using dz_omar/facebook-ads-scraper-pro.
+    page_ids: list of page_id strings (e.g. ["726736070734872"])
+    Returns: dict with page_id -> list of ads
+    """
+    if not page_ids:
+        return {}, None
+
+    # Build input for the actor - search up to max_results_per_query ads per advertiser
+    # Note: maxResultsPerQuery must be >= 10
+    input_data = {
+        "adType": "ALL",
+        "enrichWithAdDetails": False,
+        "maxResultsPerQuery": max(10, min(max_results_per_query, 200)),
+        "searchAdvertisers": page_ids if isinstance(page_ids, list) else [page_ids]
+    }
+
+    result = start_apify_actor(FACEBOOK_ADVERTISER_ACTOR, input_data)
+    if "error" in result:
+        return {}, result["error"]
+
+    ads_by_page = {}
+    items = result.get("ads", [])
+
+    for item in items:
+        if not item or "error" in str(item):
+            continue
+
+        # Get the page_id from the ad data
+        ad_page_id = str(item.get("page_id", "") or item.get("pageId", ""))
+        if not ad_page_id:
+            continue
+
+        # Parse media
+        media = item.get("media", {}) or {}
+        primary_thumbnail = media.get("primary_thumbnail", "")
+
+        # Build the ad entry (similar structure to other search functions)
+        ad_entry = {
+            "id": item.get("id", "") or item.get("ad_archive_id", ""),
+            "platform": "facebook",
+            "ad_url": item.get("ad_url", ""),
+            "page_name": item.get("page_name", "Unknown"),
+            "title": item.get("title", ""),
+            "text": item.get("text", ""),
+            "media_type": media.get("type", "image"),
+            "primary_thumbnail": primary_thumbnail,
+            "is_active": item.get("is_active", True),
+            "page_likes": item.get("page_likes", 0),
+            "platforms": item.get("platforms", []),
+            "start_date": item.get("start_date", ""),
+            "end_date": item.get("end_date", ""),
+            "ad_category": item.get("ad_category", "UNKNOWN"),
+            "scraped_at": item.get("scraped_at", ""),
+            "_raw": item
+        }
+
+        if ad_page_id not in ads_by_page:
+            ads_by_page[ad_page_id] = []
+        ads_by_page[ad_page_id].append(ad_entry)
+
+    return ads_by_page, None
 
 def search_etsy(search_term, max_items=20):
     input_data = {"searchQueries": [search_term], "maxItems": min(max_items, 50)}

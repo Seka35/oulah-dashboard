@@ -212,6 +212,7 @@ search_tiktok = scrapers.search_tiktok
 search_facebook = scrapers.search_facebook
 search_etsy = scrapers.search_etsy
 search_amazon = scrapers.search_amazon
+search_facebook_by_advertiser = scrapers.search_facebook_by_advertiser
 
 
 # ============ ROUTES ============
@@ -297,6 +298,46 @@ def api_search():
         all_ads = [a for a in all_ads if a["has_images"] and not a["has_videos"]]
     elif media_filter == "videos_only":
         all_ads = [a for a in all_ads if a["has_videos"] and not a["has_images"]]
+
+    # Enrich Facebook ads with advertiser ad counts (automatic for each search)
+    # Run in background - don't block the response
+    def enrich_fb_advertisers_in_background(fb_ads_list):
+        """Background task to enrich advertiser ad counts"""
+        page_ids = set()
+        for ad in fb_ads_list:
+            raw = ad.get("raw", {}) or ad.get("_raw", {})
+            page_id = raw.get("page_id") or raw.get("snapshot", {}).get("page_id")
+            if page_id:
+                page_ids.add(str(page_id))
+
+        if not page_ids:
+            print("📊 [Background] No page_ids found in ads")
+            return
+
+        print(f"📊 [Background] Enriching {len(page_ids)} Facebook advertisers with their full ad lists...")
+        ads_by_page = {}
+
+        for page_id in page_ids:
+            try:
+                result, err = search_facebook_by_advertiser([page_id], 50)
+                if err:
+                    print(f"⚠️ Advertiser {page_id}: {err}")
+                elif result and page_id in result:
+                    ads_by_page[page_id] = result[page_id]
+            except Exception as e:
+                print(f"⚠️ Error for {page_id}: {e}")
+
+        if ads_by_page:
+            from db import save_fb_advertiser_ads
+            saved = save_fb_advertiser_ads(ads_by_page)
+            print(f"✅ [Background] Saved {saved} advertiser ads to DB for enrichment")
+
+    # Launch background enrichment (non-blocking)
+    if all_ads:
+        fb_ads = [a for a in all_ads if a.get("platform") == "facebook"]
+        if fb_ads:
+            threading.Thread(target=enrich_fb_advertisers_in_background, args=(fb_ads,), daemon=True).start()
+            print(f"📊 Launched background enrichment for {len(set(a.get('_raw',{}).get('page_id') for a in fb_ads if a.get('_raw',{}).get('page_id')))} advertisers")
 
     # Enrich results with metadata from DB (timestamps, AI, keywords)
     from db import get_product_metadata
@@ -545,6 +586,37 @@ def api_scaling_advertisers():
     return jsonify({"advertisers": advertisers})
 
 
+@app.route("/api/facebook-advertiser/<page_id>", methods=["GET"])
+def api_facebook_advertiser_ads(page_id):
+    """
+    Get all Facebook ads for a specific advertiser page_id.
+    Optionally trigger a refresh by scraping via dz_omar/facebook-ads-scraper-pro.
+    """
+    if not APIFY_KEY:
+        return jsonify({"error": "Apify key not configured"}), 400
+
+    refresh = request.args.get("refresh", "false").lower() == "true"
+
+    # If refresh requested, scrape new data
+    if refresh:
+        ads_by_page, error = search_facebook_by_advertiser(page_id)
+        if error:
+            return jsonify({"error": error}), 500
+
+        from db import save_fb_advertiser_ads
+        saved = save_fb_advertiser_ads(ads_by_page)
+        print(f"📊 Scraped and saved {saved} ads for page_id {page_id}")
+
+    # Return ads from database
+    from db import get_fb_advertiser_ads
+    ads = get_fb_advertiser_ads(page_id, limit=200)
+    return jsonify({
+        "page_id": page_id,
+        "ad_count": len(ads),
+        "ads": ads
+    })
+
+
 @app.route("/api/etsy/top", methods=["GET"])
 def api_etsy_top():
     """Get top Etsy products by rating and reviews"""
@@ -597,20 +669,22 @@ def api_amazon_top():
 @app.route("/api/ads/all", methods=["GET"])
 def api_ads_all():
     """Get all global database raw ads and products"""
-    from db import get_all_raw_data
+    from db import get_all_raw_data, get_all_fb_advertiser_counts
     try:
         data = get_all_raw_data(limit=500)
-        
+        fb_advertiser_counts = get_all_fb_advertiser_counts()
+
         # Calculate stats
         total = len(data["ads"])
         tiktok = len([a for a in data["ads"] if a["platform"] == "tiktok"])
         facebook = len([a for a in data["ads"] if a["platform"] == "facebook"])
-        
+
         print(f"📊 API /api/ads/all: Sending {total} ads, {len(data['etsy_products'])} Etsy, {len(data['amazon_products'])} Amazon")
         return jsonify({
             "ads": data["ads"],
             "amazon_products": data["amazon_products"],
             "etsy_products": data["etsy_products"],
+            "fb_advertiser_counts": fb_advertiser_counts,
             "stats": {
                 "total": total,
                 "tiktok": tiktok,

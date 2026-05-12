@@ -582,6 +582,7 @@
         let allEtsyProducts = [];
         let allAmazonProducts = [];
         let currentDatabaseTab = 'tiktok';
+        let fbAdvertiserCounts = {};  // page_id -> ad count
 
 
         // Media filter buttons
@@ -622,6 +623,7 @@
                 allAds = data.ads.map(a => ({ ...a, _raw: a.raw || a._raw || {} }));
                 allEtsyProducts = data.etsy_products || [];
                 allAmazonProducts = data.amazon_products || [];
+                fbAdvertiserCounts = data.fb_advertiser_counts || {};
                 if (data.stats && data.stats.total > 0) {
                     updateStats(data.stats);
                     switchDatabaseTab('tiktok');
@@ -815,6 +817,15 @@
                 const aiBadge = priority ? `<div class="ai-badge ${priority.toLowerCase()}">AI: ${priority}</div>` : '';
                 const digitalTag = isDigital ? `<div class="platform-tag" style="top:40px; left:12px; background:var(--success); color:white; font-size:10px;">⚡ DIGITAL PRODUCT</div>` : '';
 
+                // Get advertiser ad count for Facebook ads
+                let advertiserAdCount = '';
+                if (ad.platform === 'facebook' && ad.raw && ad.raw.page_id) {
+                    const advertiserCount = fbAdvertiserCounts[ad.raw.page_id];
+                    if (advertiserCount && advertiserCount > 0) {
+                        advertiserAdCount = `<span class="badge" style="background:var(--accent-primary);color:white;font-size:9px;margin-left:4px;">📊 ${advertiserCount}</span>`;
+                    }
+                }
+
                 return `
                 <div class="ad-card" onclick="showAdDetail('${ad.id}', '${ad.platform}')">
                     <div class="platform-tag ${ad.platform}">${ad.platform}</div>
@@ -830,6 +841,7 @@
                                 : `<div class="ad-avatar" style="display:flex;align-items:center;justify-content:center;color:#64748B;">👤</div>`
                             }
                             <div class="ad-advertiser-name">${ad.advertiser_name || 'Unknown Advertiser'}</div>
+                            ${advertiserAdCount}
                         </div>
                         <div class="ad-meta">
                             ${ad.status === 'active' ? '<div class="badge active-status">● Active</div>' : '<div class="badge">○ Inactive</div>'}
@@ -1045,6 +1057,11 @@
                         <div class="info-title">Library Link</div>
                         <a href="${renderVal(raw.ad_library_url)}" target="_blank" style="color:var(--accent-primary);word-break:break-all;font-size:0.9em;">View in Ad Library</a>
                     </div>
+                    <div class="info-section" id="advertiser-ads-section" style="display:none;">
+                        <div class="info-title">📊 Advertiser's Other Ads</div>
+                        <div id="advertiser-ads-loading" style="color:var(--text-secondary);font-size:0.85em;">Loading...</div>
+                        <div id="advertiser-ads-list" style="max-height:300px;overflow-y:auto;"></div>
+                    </div>
                 `;
             } else if (platform === 'tiktok') {
                 const targetRegions = raw['Ad Targeting']?.regions || [];
@@ -1085,6 +1102,77 @@
 
             document.getElementById('modal_body').innerHTML = aiHtml + platformHtml;
             document.getElementById('modal').classList.add('show');
+
+            // Fetch advertiser's other ads for Facebook
+            if (platform === 'facebook' && raw.page_id) {
+                loadAdvertiserAds(raw.page_id);
+            }
+        }
+
+        async function loadAdvertiserAds(pageId) {
+            const section = document.getElementById('advertiser-ads-section');
+            const listEl = document.getElementById('advertiser-ads-list');
+            if (!section || !listEl) return;
+
+            section.style.display = 'block';
+
+            try {
+                const resp = await fetch(`/api/facebook-advertiser/${pageId}`);
+                const data = await resp.json();
+
+                if (data.ads && data.ads.length > 0) {
+                    let html = `<div style="margin-bottom:12px;padding:8px 12px;background:rgba(59,130,246,0.1);border-radius:8px;border:1px solid var(--accent-primary);">
+                        <span style="font-weight:600;color:var(--accent-primary);">${data.ad_count} ads found</span> for this advertiser
+                    </div>`;
+
+                    data.ads.forEach(ad => {
+                        const isVideo = ad.media_type === 'video';
+                        const thumb = ad.primary_thumbnail || '';
+                        const isPlaceholder = ad.title && ad.title.startsWith('{{') && ad.title.endsWith('}}');
+                        const title = isPlaceholder ? 'Creative Ad' : ad.title;
+                        const activeLabel = ad.is_active ? '🟢' : '⚪';
+
+                        html += `
+                            <div style="display:flex;align-items:center;gap:12px;padding:10px;border-bottom:1px solid var(--border-color);cursor:pointer;" onclick="showFbAdvertiserAdDetail('${ad.ad_id}', '${pageId}')">
+                                ${thumb ? `<img src="${thumb}" style="width:60px;height:45px;object-fit:cover;border-radius:6px;flex-shrink:0;">` : '<div style="width:60px;height:45px;background:var(--bg-input);border-radius:6px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:0.7em;color:var(--text-secondary);">No img</div>'}
+                                <div style="flex:1;min-width:0;">
+                                    <div style="font-size:0.85em;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${title}</div>
+                                    <div style="font-size:0.75em;color:var(--text-secondary);">
+                                        ${activeLabel} ${ad.is_active ? 'Active' : 'Inactive'} | ${ad.start_date || 'N/A'} - ${ad.end_date || 'N/A'}
+                                    </div>
+                                    <div style="font-size:0.7em;color:var(--text-secondary);">${(ad.platforms || []).join(', ')}</div>
+                                </div>
+                            </div>
+                        `;
+                    });
+
+                    listEl.innerHTML = html;
+                } else {
+                    listEl.innerHTML = `<div style="color:var(--text-secondary);font-size:0.85em;text-align:center;padding:16px;">No ads found for this advertiser. <button onclick="refreshAdvertiserAds('${pageId}')" style="color:var(--accent-primary);background:none;border:none;cursor:pointer;text-decoration:underline;">Refresh?</button></div>`;
+                }
+            } catch (e) {
+                listEl.innerHTML = `<div style="color:var(--danger);font-size:0.85em;">Failed to load ads: ${e.message}</div>`;
+            }
+        }
+
+        async function refreshAdvertiserAds(pageId) {
+            const listEl = document.getElementById('advertiser-ads-list');
+            if (listEl) listEl.innerHTML = '<div style="color:var(--text-secondary);font-size:0.85em;">Refreshing...</div>';
+
+            try {
+                const resp = await fetch(`/api/facebook-advertiser/${pageId}?refresh=true`);
+                const data = await resp.json();
+                if (data.ads) {
+                    loadAdvertiserAds(pageId);
+                }
+            } catch (e) {
+                console.error('Failed to refresh:', e);
+            }
+        }
+
+        function showFbAdvertiserAdDetail(adId, pageId) {
+            // Open the ad detail in a new modal or navigate
+            window.open(`https://www.facebook.com/ads/library/?id=${adId}`, '_blank');
         }
 
         async function runAiAnalysis(id, platform, btnId = null) {
