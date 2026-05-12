@@ -48,8 +48,8 @@ def save_landing_page(ad_archive_id, source_url, html_content=None, metadata=Non
     cursor = conn.cursor()
     try:
         cursor.execute("""
-            INSERT INTO landing_pages (ad_archive_id, source_url, domain, headline, price_amount, price_text, currency, checkout_type, status, scrape_error, scraped_at, local_html_path, local_assets_path)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO landing_pages (ad_archive_id, source_url, domain, headline, price_amount, price_text, currency, checkout_type, status, scrape_error, scraped_at, local_html_path, local_assets_path, r2_url)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT (ad_archive_id, source_url) DO UPDATE SET
                 scraped_html = EXCLUDED.scraped_html,
                 local_html_path = EXCLUDED.local_html_path,
@@ -62,7 +62,8 @@ def save_landing_page(ad_archive_id, source_url, html_content=None, metadata=Non
                 checkout_type = EXCLUDED.checkout_type,
                 status = EXCLUDED.status,
                 scrape_error = EXCLUDED.scrape_error,
-                scraped_at = EXCLUDED.scraped_at
+                scraped_at = EXCLUDED.scraped_at,
+                r2_url = EXCLUDED.r2_url
         """, (
             ad_archive_id, source_url,
             metadata.get('domain') if metadata else None,
@@ -75,7 +76,8 @@ def save_landing_page(ad_archive_id, source_url, html_content=None, metadata=Non
             metadata.get('scrape_error') if metadata else None,
             datetime.now() if metadata and metadata.get('status') == 'scraped' else None,
             metadata.get('local_html_path') if metadata else None,
-            metadata.get('local_assets_path') if metadata else None
+            metadata.get('local_assets_path') if metadata else None,
+            metadata.get('r2_url') if metadata else None
         ))
         conn.commit()
     except Exception as e:
@@ -315,6 +317,16 @@ def scrape_landing_page(ad_archive_id, url, output_dir=None):
         with open(html_path, 'w', encoding='utf-8') as f:
             f.write(str(soup))
         result['local_html_path'] = html_path
+
+        # Upload to R2
+        try:
+            from r2_storage import upload_landing_page
+            r2_url = upload_landing_page(html_path, ad_archive_id)
+            if r2_url:
+                result['r2_url'] = r2_url
+                print(f"  ☁️ Uploaded to R2: {r2_url}")
+        except Exception as e:
+            print(f"  ⚠️ R2 upload skipped: {e}")
 
         # Store first 50k of html for DB
         result['scraped_html'] = str(soup)[:50000]

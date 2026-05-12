@@ -41,3 +41,4 @@ backups/
 access
 *.pem
 *.key
+*.token.json

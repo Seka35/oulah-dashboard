@@ -1012,7 +1012,7 @@ def api_get_landing_page(ad_archive_id):
     try:
         cursor.execute("""
             SELECT id, ad_archive_id, source_url, domain, headline, price_amount, price_text,
-                   currency, checkout_type, status, scrape_error, local_html_path, scraped_at
+                   currency, checkout_type, status, scrape_error, local_html_path, scraped_at, r2_url
             FROM landing_pages WHERE ad_archive_id = %s
             ORDER BY scraped_at DESC LIMIT 1
         """, (ad_archive_id,))
@@ -1032,7 +1032,8 @@ def api_get_landing_page(ad_archive_id):
             "status": row[9],
             "scrape_error": row[10],
             "local_html_path": row[11],
-            "scraped_at": row[12].isoformat() if row[12] else None
+            "scraped_at": row[12].isoformat() if row[12] else None,
+            "r2_url": row[13]
         })
     finally:
         cursor.close()

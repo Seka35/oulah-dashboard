@@ -161,3 +161,74 @@ def guess_content_type(filename):
         'webp': 'image/webp',
     }
     return mime_types.get(ext, 'application/octet-stream')
+
+
+# ============ Landing Pages ============
+
+def get_landing_page_key(ad_archive_id, filename="index.html"):
+    """Génère la clé R2 pour une landing page"""
+    return f"scrape/landing_pages/{ad_archive_id}/{filename}"
+
+
+def upload_landing_page(local_html_path, ad_archive_id):
+    """
+    Upload tous les fichiers d'une landing page vers R2.
+    Retourne l'URL publique de la page HTML principale.
+    """
+    if not os.path.exists(local_html_path):
+        print(f"[R2] Landing page file not found: {local_html_path}")
+        return None
+
+    try:
+        s3 = get_s3_client()
+        html_dir = os.path.dirname(local_html_path)
+        html_filename = os.path.basename(local_html_path)
+
+        # Upload le fichier HTML principal
+        html_key = get_landing_page_key(ad_archive_id, html_filename)
+        s3.upload_file(
+            Filename=local_html_path,
+            Bucket=R2_BUCKET,
+            Key=html_key,
+            ExtraArgs={
+                'ContentType': 'text/html; charset=utf-8',
+                'CacheControl': 'public, max-age=86400',
+                'ACL': 'public-read',
+            },
+        )
+        main_url = f"{R2_PUBLIC_URL}/{html_key}"
+        print(f"[R2] Landing page uploaded: {html_key}")
+
+        # Upload les autres fichiers dans le dossier (css, js, etc.)
+        if os.path.isdir(html_dir):
+            for root, dirs, files in os.walk(html_dir):
+                for file in files:
+                    if file == html_filename:
+                        continue  # déjà uploadé
+                    file_path = os.path.join(root, file)
+                    rel_path = os.path.relpath(file_path, html_dir)
+                    key = get_landing_page_key(ad_archive_id, f"assets/{rel_path}")
+
+                    ext = file.lower().split('.')[-1]
+                    content_type = guess_content_type(file)
+                    if ext == 'js':
+                        content_type = 'application/javascript'
+                    elif ext == 'css':
+                        content_type = 'text/css'
+
+                    s3.upload_file(
+                        Filename=file_path,
+                        Bucket=R2_BUCKET,
+                        Key=key,
+                        ExtraArgs={
+                            'ContentType': content_type,
+                            'CacheControl': 'public, max-age=31536000',
+                            'ACL': 'public-read',
+                        },
+                    )
+
+        return main_url
+
+    except Exception as e:
+        print(f"[R2] Landing page upload error: {e}")
+        return None
