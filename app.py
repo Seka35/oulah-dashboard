@@ -10,7 +10,7 @@ import sqlite3
 import json
 import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from flask import Flask, render_template, request, jsonify, send_from_directory
+from flask import Flask, render_template, request, jsonify, send_from_directory, send_file
 import threading
 from datetime import datetime
 from dotenv import load_dotenv
@@ -476,8 +476,8 @@ def api_history_detail(search_id):
 
 @app.route("/api/analysis/<platform>/<external_id>")
 def api_get_analysis(platform, external_id):
-    from db import get_ai_analysis
-    analysis = get_ai_analysis(platform, external_id)
+    from db import get_product_metadata
+    analysis = get_product_metadata(platform, external_id)
     return jsonify({"ai_analysis": analysis})
 
 @app.route("/api/analyze_product", methods=["POST"])
@@ -981,6 +981,159 @@ def api_update_system_prompt():
     except:
         pass
     return jsonify({"success": success})
+
+@app.route("/api/landing-pages/scrape", methods=["POST"])
+def api_scrape_landing_pages():
+    """Scrape one or more landing pages"""
+    from landing_page_scraper import scrape_landing_page, save_landing_page, scrape_batch
+
+    data = request.json
+    items = data.get('items', [])
+
+    if not items:
+        return jsonify({"error": "No items provided"}), 400
+
+    # Single or batch
+    if len(items) == 1:
+        item = items[0]
+        result = scrape_landing_page(item['ad_archive_id'], item['link_url'])
+        save_landing_page(item['ad_archive_id'], item['link_url'], metadata=result)
+        return jsonify(result)
+    else:
+        results = scrape_batch(items)
+        return jsonify({"results": results, "total": len(results)})
+
+
+@app.route("/api/landing-pages/<ad_archive_id>", methods=["GET"])
+def api_get_landing_page(ad_archive_id):
+    """Get landing page info for an ad"""
+    conn = db.get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            SELECT id, ad_archive_id, source_url, domain, headline, price_amount, price_text,
+                   currency, checkout_type, status, scrape_error, local_html_path, scraped_at
+            FROM landing_pages WHERE ad_archive_id = %s
+            ORDER BY scraped_at DESC LIMIT 1
+        """, (ad_archive_id,))
+        row = cursor.fetchone()
+        if not row:
+            return jsonify({"error": "Not found"}), 404
+        return jsonify({
+            "id": row[0],
+            "ad_archive_id": row[1],
+            "source_url": row[2],
+            "domain": row[3],
+            "headline": row[4],
+            "price_amount": float(row[5]) if row[5] else None,
+            "price_text": row[6],
+            "currency": row[7],
+            "checkout_type": row[8],
+            "status": row[9],
+            "scrape_error": row[10],
+            "local_html_path": row[11],
+            "scraped_at": row[12].isoformat() if row[12] else None
+        })
+    finally:
+        cursor.close()
+        conn.close()
+
+
+@app.route("/api/landing-pages/<ad_archive_id>/download", methods=["GET"])
+def api_download_landing_page(ad_archive_id):
+    """Download landing page as ZIP"""
+    from landing_page_scraper import create_download_zip
+    import zipfile
+
+    # Check if we have a scraped page
+    conn = db.get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            SELECT local_assets_path FROM landing_pages
+            WHERE ad_archive_id = %s AND status = 'scraped'
+            ORDER BY scraped_at DESC LIMIT 1
+        """, (ad_archive_id,))
+        row = cursor.fetchone()
+    finally:
+        cursor.close()
+        conn.close()
+
+    if not row or not row[0]:
+        return jsonify({"error": "No scraped landing page found"}), 404
+
+    assets_path = row[0]
+    zip_path = create_download_zip(ad_archive_id)
+
+    if not zip_path or not os.path.exists(zip_path):
+        return jsonify({"error": "Failed to create ZIP"}), 500
+
+    return send_file(zip_path, as_attachment=True, download_name=f"landing_page_{ad_archive_id}.zip")
+
+
+@app.route("/api/landing-pages/<ad_archive_id>/view", methods=["GET"])
+def api_view_landing_page(ad_archive_id):
+    """View the scraped landing page HTML"""
+    conn = db.get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            SELECT local_html_path FROM landing_pages
+            WHERE ad_archive_id = %s AND status = 'scraped'
+            ORDER BY scraped_at DESC LIMIT 1
+        """, (ad_archive_id,))
+        row = cursor.fetchone()
+    finally:
+        cursor.close()
+        conn.close()
+
+    if not row or not row[0]:
+        return jsonify({"error": "No scraped landing page found"}), 404
+
+    html_path = row[0]
+    if not os.path.exists(html_path):
+        return jsonify({"error": "HTML file not found"}), 404
+
+    return send_file(html_path, mimetype='text/html')
+
+
+@app.route("/api/landing-pages/scrape-pending", methods=["POST"])
+def api_scrape_pending():
+    """Scrape all ads that have link_url but no landing page yet"""
+    from landing_page_scraper import scrape_landing_page, save_landing_page
+
+    conn = db.get_connection()
+    cursor = conn.cursor()
+    try:
+        # Find ads with link_url in cards that don't have a landing page yet
+        cursor.execute("""
+            SELECT DISTINCT a.ad_archive_id, ac.link_url
+            FROM ads a
+            JOIN ad_cards ac ON a.ad_archive_id = ac.ad_archive_id
+            LEFT JOIN landing_pages lp ON a.ad_archive_id = lp.ad_archive_id
+            WHERE ac.link_url IS NOT NULL
+              AND ac.link_url NOT IN ('N/A', '', 'null', 'undefined')
+              AND lp.id IS NULL
+            LIMIT 50
+        """)
+        pending = cursor.fetchall()
+    finally:
+        cursor.close()
+        conn.close()
+
+    if not pending:
+        return jsonify({"message": "No pending landing pages to scrape", "count": 0})
+
+    items = [{'ad_archive_id': row[0], 'link_url': row[1]} for row in pending]
+    from landing_page_scraper import scrape_batch
+    results = scrape_batch(items)
+
+    return jsonify({
+        "message": f"Scraped {len(results)} landing pages",
+        "count": len(results),
+        "results": results
+    })
+
 
 if __name__ == "__main__":
     init_db()

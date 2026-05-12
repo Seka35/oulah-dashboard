@@ -18,6 +18,7 @@
             --accent-hover: #8B5CF6;
             --success: #10B981;
             --danger: #EF4444;
+            --warning: #F59E0B;
             --cyan: #06B6D4;
         }
 
@@ -277,8 +278,8 @@
         .modal-close:hover { background: var(--danger); color: white; border-color: var(--danger); transform: rotate(90deg); }
 
         .modal-body { display: flex; flex-wrap: wrap; overflow-y: auto; max-height: calc(90vh - 80px); }
-        .modal-media-col { flex: 1; min-width: 350px; padding: 24px; background: var(--bg-input); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; }
-        .modal-info-col { flex: 1.5; min-width: 350px; padding: 24px; height: 100%; }
+        .modal-media-col { flex: 1; min-width: 350px; padding: 24px; background: var(--bg-input); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; overflow-y: auto; }
+        .modal-info-col { flex: 1.5; min-width: 350px; padding: 24px; overflow-y: auto; }
 
         .modal-media-wrapper { width: 100%; border-radius: 16px; overflow: hidden; border: 1px solid var(--border-color); background: #000; position: relative; }
         .modal-media-wrapper img, .modal-media-wrapper video { width: 100%; display: block; max-height: 60vh; object-fit: contain; }
@@ -1057,6 +1058,10 @@
                         <div class="info-title">Library Link</div>
                         <a href="${renderVal(raw.ad_library_url)}" target="_blank" style="color:var(--accent-primary);word-break:break-all;font-size:0.9em;">View in Ad Library</a>
                     </div>
+                    <div class="info-section" id="landing-page-section">
+                        <div class="info-title">🖥️ Landing Page</div>
+                        <div id="landing-page-content">Loading...</div>
+                    </div>
                     <div class="info-section" id="advertiser-ads-section" style="display:none;">
                         <div class="info-title">📊 Advertiser's Other Ads</div>
                         <div id="advertiser-ads-loading" style="color:var(--text-secondary);font-size:0.85em;">Loading...</div>
@@ -1106,6 +1111,101 @@
             // Fetch advertiser's other ads for Facebook
             if (platform === 'facebook' && raw.page_id) {
                 loadAdvertiserAds(raw.page_id);
+            }
+
+            // Fetch landing page info for Facebook ads
+            const adArchiveId = raw.ad_archive_id || ad.id || adArchiveId;
+            if (platform === 'facebook' && adArchiveId) {
+                loadLandingPageInfo(adArchiveId);
+            }
+        }
+
+        async function loadLandingPageInfo(adArchiveId) {
+            const section = document.getElementById('landing-page-section');
+            const content = document.getElementById('landing-page-content');
+            if (!section || !content) return;
+
+            console.log('Loading landing page for:', adArchiveId);
+
+            try {
+                const resp = await fetch(`/api/landing-pages/${adArchiveId}`);
+                console.log('Landing page response:', resp.status, resp.statusText);
+                if (!resp.ok) {
+                    // No landing page scraped yet - show scrape button
+                    content.innerHTML = `<div style="color:var(--text-secondary);font-size:0.85em;margin-bottom:10px;">No landing page scraped yet</div>
+                        <button onclick="scrapeLandingPage('${adArchiveId}')" style="background:var(--accent-primary);color:white;padding:6px 12px;border-radius:6px;font-size:0.8em;border:none;cursor:pointer;">🕷 Scrape Now</button>`;
+                    return;
+                }
+                const data = await resp.json();
+                console.log('Landing page data:', data);
+
+                if (data.status === 'scraped') {
+                    let html = `
+                        <div style="margin-bottom:10px;">
+                            <div style="font-size:0.85em;"><strong>Domain:</strong> ${data.domain || '–'}</div>
+                            <div style="font-size:0.85em;"><strong>Headline:</strong> ${data.headline ? data.headline.substring(0, 60) + '...' : '–'}</div>
+                            <div style="font-size:0.85em;"><strong>Price:</strong> ${data.price_text || '–'}</div>
+                            <div style="font-size:0.85em;"><strong>Checkout:</strong> ${data.checkout_type || '–'}</div>
+                        </div>
+                        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                            <a href="/api/landing-pages/${adArchiveId}/view" target="_blank" style="background:var(--accent-primary);color:white;padding:6px 12px;border-radius:6px;font-size:0.8em;text-decoration:none;">👁 View Page</a>
+                            <a href="/api/landing-pages/${adArchiveId}/download" style="background:var(--success);color:white;padding:6px 12px;border-radius:6px;font-size:0.8em;text-decoration:none;">📥 Download ZIP</a>
+                            <button onclick="scrapeLandingPage('${adArchiveId}')" style="background:var(--warning);color:white;padding:6px 12px;border-radius:6px;font-size:0.8em;border:none;cursor:pointer;">🔄 Rescrape</button>
+                        </div>
+                    `;
+                    content.innerHTML = html;
+                } else if (data.status === 'failed') {
+                    content.innerHTML = `<div style="color:var(--danger);font-size:0.85em;">Failed: ${data.scrape_error || 'Unknown error'}</div>
+                        <button onclick="scrapeLandingPage('${adArchiveId}')" style="margin-top:8px;background:var(--accent-primary);color:white;padding:6px 12px;border-radius:6px;font-size:0.8em;border:none;cursor:pointer;">🔄 Retry</button>`;
+                } else {
+                    content.innerHTML = `<div style="color:var(--text-secondary);font-size:0.85em;">Status: ${data.status}</div>
+                        <button onclick="scrapeLandingPage('${adArchiveId}')" style="margin-top:8px;background:var(--accent-primary);color:white;padding:6px 12px;border-radius:6px;font-size:0.8em;border:none;cursor:pointer;">🕷 Scrape Now</button>`;
+                }
+            } catch (e) {
+                content.innerHTML = '<div style="color:var(--danger);font-size:0.85em;">Error loading landing page</div>';
+            }
+        }
+
+        async function scrapeLandingPage(adArchiveId) {
+            const content = document.getElementById('landing-page-content');
+            if (content) content.innerHTML = '<div style="color:var(--text-secondary);">Scraping...</div>';
+
+            try {
+                // Get the link_url from the ad - check multiple possible paths
+                const ad = allAds.find(a => (a.ad_archive_id || a.id) == adArchiveId);
+                const raw = ad?._raw || ad || {};
+                console.log('DEBUG: looking for link_url in ad:', adArchiveId, 'raw keys:', Object.keys(raw));
+                console.log('DEBUG: raw.snapshot:', raw.snapshot ? 'exists' : 'none');
+                console.log('DEBUG: raw.cards:', raw.cards ? raw.cards.length : 0);
+                console.log('DEBUG: raw.snapshot?.cards:', raw.snapshot?.cards ? raw.snapshot.cards.length : 0);
+
+                // Try multiple paths for link_url
+                let linkUrl = null;
+                if (raw.cards && raw.cards[0]?.link_url) {
+                    linkUrl = raw.cards[0].link_url;
+                } else if (raw.snapshot?.cards?.[0]?.link_url) {
+                    linkUrl = raw.snapshot.cards[0].link_url;
+                } else if (raw.link_url) {
+                    linkUrl = raw.link_url;
+                }
+
+                if (!linkUrl) {
+                    if (content) content.innerHTML = `<div style="color:var(--danger);">No link_url found in ad cards</div>
+                        <div style="font-size:0.7em;color:var(--text-secondary);margin-top:8px;">Debug: raw has ${Object.keys(raw).length} keys</div>`;
+                    return;
+                }
+
+                const resp = await fetch('/api/landing-pages/scrape', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ items: [{ ad_archive_id: adArchiveId, link_url: linkUrl }] })
+                });
+                const result = await resp.json();
+
+                // Reload the landing page info
+                loadLandingPageInfo(adArchiveId);
+            } catch (e) {
+                if (content) content.innerHTML = '<div style="color:var(--danger);">Error: ' + e.message + '</div>';
             }
         }
 
@@ -1295,6 +1395,9 @@
             `;
 
             try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 300000); // 5min timeout
+
                 const response = await fetch('/api/search', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -1307,8 +1410,10 @@
                         include_etsy: document.getElementById('include_etsy').value === 'true',
                         include_amazon: document.getElementById('include_amazon').value === 'true',
                         auto_analyze: document.getElementById('auto_analyze').checked
-                    })
+                    }),
+                    signal: controller.signal
                 });
+                clearTimeout(timeoutId);
 
                 const data = await response.json();
 
@@ -1328,13 +1433,17 @@
                 renderProducts(data.amazon_products, 'amazon', 'amazon-grid');
                 renderProducts(data.etsy_products, 'etsy', 'etsy-grid');
 
-                showToast(`Analyse terminée: ${data.stats.total} résultats`, 'success');
-                
+                showToast(`Analyse terminée: ${(data.stats?.total || 0)} résultats`, 'success');
+
                 // Refresh global DB in background
                 loadAllGlobalData();
 
             } catch (error) {
-                document.getElementById('results').innerHTML = `<div class="error-msg">Connection Error: ${error.message}</div>`;
+                if (error.name === 'AbortError') {
+                    document.getElementById('results').innerHTML = `<div class="error-msg">Timeout: L'analyse a pris trop de temps. Réessaie avec moins de résultats.</div>`;
+                } else {
+                    document.getElementById('results').innerHTML = `<div class="error-msg">Connection Error: ${error.message}</div>`;
+                }
             }
 
             btn.disabled = false;
