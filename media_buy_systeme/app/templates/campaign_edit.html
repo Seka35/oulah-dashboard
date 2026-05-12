@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Edit' if campaign else 'New' }} Campaign - Meta Campaign Manager{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h2>{{ 'Edit' if campaign else 'New' }} Campaign</h2>
+    </div>
+</div>
+
+<div class="card p-4">
+    <form method="post" action="{{ form_action }}">
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label">Name</label>
+                <input type="text" name="name" class="form-control" value="{{ campaign.name if campaign else '' }}" required>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Objective</label>
+                <select name="objective" class="form-select">
+                    <option value="OUTCOME_LEADS" {{ 'selected' if campaign and campaign.objective == 'OUTCOME_LEADS' }}>Leads</option>
+                    <option value="OUTCOME_TRAFFIC" {{ 'selected' if campaign and campaign.objective == 'OUTCOME_TRAFFIC' }}>Traffic</option>
+                    <option value="OUTCOME_CONVERSIONS" {{ 'selected' if campaign and campaign.objective == 'OUTCOME_CONVERSIONS' }}>Conversions</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Budget (€)</label>
+                <input type="number" name="budget" class="form-control" step="0.01" value="{{ (campaign.budget / 100) if campaign else '50' }}">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Budget Type</label>
+                <select name="budget_type" class="form-select">
+                    <option value="DAILY" {{ 'selected' if campaign and campaign.budget_type == 'DAILY' }}>Daily</option>
+                    <option value="LIFETIME" {{ 'selected' if campaign and campaign.budget_type == 'LIFETIME' }}>Lifetime</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Countries</label>
+                <input type="text" name="countries" class="form-control" value="{{ campaign.countries if campaign else 'FR' }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Age Min</label>
+                <input type="number" name="age_min" class="form-control" value="{{ campaign.age_min if campaign else '18' }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Age Max</label>
+                <input type="number" name="age_max" class="form-control" value="{{ campaign.age_max if campaign else '65' }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Creative</label>
+                <select name="creative_key" class="form-select" id="creativeSelect">
+                    <option value="">— No creative —</option>
+                    {% for f in creatives %}
+                    <option value="{{ f.key }}" {{ 'selected' if campaign and campaign.creative_key == f.key }}>{{ f.key }}</option>
+                    {% endfor %}
+                </select>
+                <div id="creativePreview" class="mt-2 text-center"></div>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Status</label>
+                <select name="status" class="form-select">
+                    <option value="DRAFT" {{ 'selected' if campaign and campaign.status == 'DRAFT' }}>Draft (not launched)</option>
+                    <option value="PAUSED" {{ 'selected' if campaign and campaign.status == 'PAUSED' }}>Paused</option>
+                    <option value="ACTIVE" {{ 'selected' if campaign and campaign.status == 'ACTIVE' }}>Active</option>
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Ad Title</label>
+                <input type="text" name="ad_title" class="form-control" value="{{ campaign.ad_title if campaign else '' }}">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Ad Body</label>
+                <textarea name="ad_body" class="form-control" rows="2">{{ campaign.ad_body if campaign else '' }}</textarea>
+            </div>
+            <div class="col-md-12">
+                <label class="form-label">CTA Link</label>
+                <input type="url" name="cta_link" class="form-control" value="{{ campaign.cta_link if campaign else '' }}">
+            </div>
+            <div class="col-md-12 text-end mt-3">
+                <a href="/campaigns" class="btn btn-secondary">Cancel</a>
+                <button type="submit" class="btn btn-primary">Save Campaign</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+const creatives = {{ creatives | tojson }};
+const select = document.getElementById('creativeSelect');
+const preview = document.getElementById('creativePreview');
+
+function updatePreview() {
+    const key = select.value;
+    if (!key) { preview.innerHTML = ''; return; }
+    const f = creatives.find(c => c.key === key);
+    if (!f) return;
+    if (f.type === 'image') {
+        preview.innerHTML = `<img src="${f.url}" style="max-height:100px; max-width:100%;" class="rounded">`;
+    } else if (f.type === 'video') {
+        preview.innerHTML = `<video src="${f.url}" style="max-height:100px; max-width:100%;" controls class="rounded"></video>`;
+    } else {
+        preview.innerHTML = `<div class="text-muted small">📄 ${key}</div>`;
+    }
+}
+select.addEventListener('change', updatePreview);
+updatePreview();
+</script>
+{% endblock %}
