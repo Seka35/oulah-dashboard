@@ -1136,6 +1136,145 @@ def api_scrape_pending():
     })
 
 
+@app.route("/api/landing-pages/<ad_archive_id>/rebrand", methods=["POST"])
+def api_rebrand_landing_page(ad_archive_id):
+    """Rebrand a scraped landing page using AI"""
+    import rebrand as rebrand_service
+
+    conn = db.get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            SELECT local_html_path FROM landing_pages
+            WHERE ad_archive_id = %s AND status = 'scraped'
+            ORDER BY scraped_at DESC LIMIT 1
+        """, (ad_archive_id,))
+        row = cursor.fetchone()
+    finally:
+        cursor.close()
+        conn.close()
+
+    if not row or not row[0]:
+        return jsonify({"error": "No scraped landing page found"}), 404
+
+    html_path = row[0]
+    if not os.path.exists(html_path):
+        return jsonify({"error": "HTML file not found"}), 404
+
+    # Read the HTML
+    with open(html_path, 'r', encoding='utf-8', errors='ignore') as f:
+        raw_html = f.read()
+
+    if not raw_html:
+        return jsonify({"error": "Empty HTML file"}), 400
+
+    # Run rebrand
+    try:
+        result = rebrand_service.rebrand_landing(raw_html)
+
+        if not result.get("success"):
+            return jsonify({"error": result.get("error", "Rebrand failed")}), 500
+
+        # Save rebranded HTML and payment page to rebrand directory
+        from datetime import datetime
+        rebrand_dir = os.path.join("static/landing_pages", f"{ad_archive_id}_rebranded")
+        os.makedirs(rebrand_dir, exist_ok=True)
+        rebrand_html_path = os.path.join(rebrand_dir, "index.html")
+        checkout_html_path = os.path.join(rebrand_dir, "checkout.html")
+
+        with open(rebrand_html_path, 'w', encoding='utf-8') as f:
+            f.write(result.get("cleaned_html", ""))
+
+        # Save the Stripe payment page
+        if result.get("payment_html"):
+            with open(checkout_html_path, 'w', encoding='utf-8') as f:
+                f.write(result.get("payment_html"))
+
+        return jsonify({
+            "success": True,
+            "brand_name": result.get("brand_name", ""),
+            "brand_tagline": result.get("brand_tagline", ""),
+            "new_price": result.get("new_price", ""),
+            "brand_color": result.get("brand_color", "#FF6B35"),
+            "logo_text": result.get("logo_text", ""),
+            "cta_text": result.get("cta_text", "Shop Now"),
+            "slug": result.get("slug", ""),
+            "local_html_path": rebrand_html_path,
+            "checkout_url": f"/api/landing-pages/{ad_archive_id}/rebrand/checkout",
+            "preview_url": f"/api/landing-pages/{ad_archive_id}/rebrand/preview"
+        })
+    except Exception as e:
+        import traceback
+        return jsonify({"error": str(e), "trace": traceback.format_exc()}), 500
+
+
+@app.route("/api/landing-pages/<ad_archive_id>/rebrand/preview", methods=["GET"])
+def api_rebrand_preview(ad_archive_id):
+    """Preview the rebranded landing page"""
+    rebrand_dir = os.path.join("static/landing_pages", f"{ad_archive_id}_rebranded")
+    rebrand_html_path = os.path.join(rebrand_dir, "index.html")
+
+    if not os.path.exists(rebrand_html_path):
+        return jsonify({"error": "No rebranded page found. Run /rebrand first."}), 404
+
+    return send_file(rebrand_html_path, mimetype='text/html')
+
+
+@app.route("/api/landing-pages/<ad_archive_id>/rebrand/checkout", methods=["GET"])
+def api_rebrand_checkout(ad_archive_id):
+    """View the Stripe payment page for a rebranded landing"""
+    rebrand_dir = os.path.join("static/landing_pages", f"{ad_archive_id}_rebranded")
+    checkout_path = os.path.join(rebrand_dir, "checkout.html")
+
+    if not os.path.exists(checkout_path):
+        return jsonify({"error": "No checkout page found. Run /rebrand first."}), 404
+
+    return send_file(checkout_path, mimetype='text/html')
+
+
+@app.route("/api/landing-pages/<ad_archive_id>/rebrand/publish", methods=["POST"])
+def api_rebrand_publish(ad_archive_id):
+    """Publish the rebranded landing page to VPS"""
+    import rebrand as rebrand_service
+
+    rebrand_dir = os.path.join("static/landing_pages", f"{ad_archive_id}_rebranded")
+    rebrand_html_path = os.path.join(rebrand_dir, "index.html")
+
+    if not os.path.exists(rebrand_html_path):
+        return jsonify({"error": "No rebranded page found. Run /rebrand first."}), 404
+
+    with open(rebrand_html_path, 'r', encoding='utf-8', errors='ignore') as f:
+        html_content = f.read()
+
+    # Get slug from rebrand data if available, otherwise generate from ad_archive_id
+    slug = ad_archive_id[:50].lower().replace(" ", "-").replace("_", "-")
+    slug = re.sub(r'[^a-z0-9\-_]', '-', slug)
+    slug = re.sub(r'-+', '-', slug).strip('-')
+
+    result = rebrand_service.publish_to_vps(slug=slug, html_content=html_content)
+
+    if result.get("success"):
+        return jsonify({
+            "success": True,
+            "url": result.get("url", ""),
+            "slug": slug
+        })
+    else:
+        return jsonify({"error": result.get("error", "Publish failed")}), 500
+
+
+@app.route("/api/landing-pages/<ad_archive_id>/rebrand/view", methods=["GET"])
+def api_rebrand_view(ad_archive_id):
+    """View the rebranded landing page in browser"""
+    rebrand_dir = os.path.join("static/landing_pages", f"{ad_archive_id}_rebranded")
+    rebrand_html_path = os.path.join(rebrand_dir, "index.html")
+
+    if not os.path.exists(rebrand_html_path):
+        return jsonify({"error": "No rebranded page found. Run /rebrand first."}), 404
+
+    return send_file(rebrand_html_path, mimetype='text/html')
+
+
 if __name__ == "__main__":
     init_db()
     

@@ -1151,6 +1151,7 @@
                             <a href="/api/landing-pages/${adArchiveId}/view" target="_blank" style="background:var(--accent-primary);color:white;padding:6px 12px;border-radius:6px;font-size:0.8em;text-decoration:none;">👁 View Page</a>
                             <a href="/api/landing-pages/${adArchiveId}/download" style="background:var(--success);color:white;padding:6px 12px;border-radius:6px;font-size:0.8em;text-decoration:none;">📥 Download ZIP</a>
                             <button onclick="scrapeLandingPage('${adArchiveId}')" style="background:var(--warning);color:white;padding:6px 12px;border-radius:6px;font-size:0.8em;border:none;cursor:pointer;">🔄 Rescrape</button>
+                            <button onclick="rebrandLandingPage('${adArchiveId}')" id="rebrand-btn-${adArchiveId}" style="background:var(--accent-secondary);color:white;padding:6px 12px;border-radius:6px;font-size:0.8em;border:none;cursor:pointer;">🎨 Rebrand LP</button>
                         </div>
                     `;
                     content.innerHTML = html;
@@ -1206,6 +1207,80 @@
                 loadLandingPageInfo(adArchiveId);
             } catch (e) {
                 if (content) content.innerHTML = '<div style="color:var(--danger);">Error: ' + e.message + '</div>';
+            }
+        }
+
+        async function rebrandLandingPage(adArchiveId) {
+            const btn = document.getElementById(`rebrand-btn-${adArchiveId}`);
+            const content = document.getElementById('landing-page-content');
+            if (btn) btn.disabled = true, btn.textContent = '⏳ Rebranding...';
+            if (content) content.innerHTML = '<div style="color:var(--text-secondary);">🤖 AI rebranding in progress...</div>';
+
+            try {
+                const resp = await fetch(`/api/landing-pages/${adArchiveId}/rebrand`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const result = await resp.json();
+
+                if (result.error) {
+                    if (content) content.innerHTML = `<div style="color:var(--danger);font-size:0.85em;">❌ Rebrand failed: ${result.error}</div>`;
+                    if (btn) btn.disabled = false, btn.textContent = '🎨 Rebrand LP';
+                    return;
+                }
+
+                // Show success with preview and publish buttons
+                if (content) content.innerHTML = `
+                    <div style="background:linear-gradient(135deg,#667eea,#764ba2);padding:12px;border-radius:8px;color:white;margin-bottom:10px;">
+                        <div style="font-weight:600;font-size:0.9em;">✅ Rebranding Complete!</div>
+                        <div style="font-size:0.8em;opacity:0.9;margin-top:4px;">${result.brand_name} — $${result.new_price}</div>
+                    </div>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                        <a href="/api/landing-pages/${adArchiveId}/rebrand/preview" target="_blank" style="background:#667eea;color:white;padding:6px 12px;border-radius:6px;font-size:0.8em;text-decoration:none;">👁 View New LP</a>
+                        <a href="/api/landing-pages/${adArchiveId}/rebrand/checkout" target="_blank" style="background:#ff6b35;color:white;padding:6px 12px;border-radius:6px;font-size:0.8em;text-decoration:none;">💳 View Checkout</a>
+                        <button onclick="publishRebrandedLP('${adArchiveId}')" id="publish-btn-${adArchiveId}" style="background:#28a745;color:white;padding:6px 12px;border-radius:6px;font-size:0.8em;border:none;cursor:pointer;">🚀 Publish to VPS</button>
+                    </div>
+                `;
+                if (btn) btn.style.display = 'none';
+            } catch (e) {
+                if (content) content.innerHTML = `<div style="color:var(--danger);font-size:0.85em;">Error: ${e.message}</div>`;
+                if (btn) btn.disabled = false, btn.textContent = '🎨 Rebrand LP';
+            }
+        }
+
+        async function publishRebrandedLP(adArchiveId) {
+            const btn = document.getElementById(`publish-btn-${adArchiveId}`);
+            if (btn) btn.disabled = true, btn.textContent = '⏳ Publishing...';
+
+            try {
+                const resp = await fetch(`/api/landing-pages/${adArchiveId}/rebrand/publish`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const result = await resp.json();
+
+                if (result.error) {
+                    alert('Publish failed: ' + result.error);
+                    if (btn) btn.disabled = false, btn.textContent = '🚀 Publish to VPS';
+                    return;
+                }
+
+                // Show success with live URL
+                const content = document.getElementById('landing-page-content');
+                if (content) {
+                    content.innerHTML = `
+                        <div style="background:#28a745;padding:12px;border-radius:8px;color:white;margin-bottom:10px;">
+                            <div style="font-weight:600;">✅ Published!</div>
+                            <div style="font-size:0.85em;margin-top:4px;">
+                                <a href="${result.url}" target="_blank" style="color:white;text-decoration:underline;">${result.url}</a>
+                            </div>
+                        </div>
+                        <a href="${result.url}" target="_blank" class="btn" style="background:var(--accent-primary);color:white;padding:8px 16px;border-radius:6px;text-decoration:none;font-size:0.85em;">🔗 Open on ignuva.shop</a>
+                    `;
+                }
+            } catch (e) {
+                alert('Publish error: ' + e.message);
+                if (btn) btn.disabled = false, btn.textContent = '🚀 Publish to VPS';
             }
         }
 

@@ -294,23 +294,111 @@ def scrape_landing_page(ad_archive_id, url, output_dir=None):
                     result['checkout_type'] = platform
                     break
 
-        # Download and inline assets (only for small images, skip for now with Playwright)
+        # Download and inline ALL critical assets (CSS, JS, fonts, images)
+        # This makes the HTML fully self-contained for AI rebranding
         asset_count = 0
 
-        # Images - inline small images as base64
-        for img in soup.find_all('img'):
-            src = img.get('src') or img.get('data-src')
-            if not src:
-                continue
-            img_url = urljoin(url, src)
-            content, mime = download_file(img_url)
-            if content and mime and len(content) < 300000:  # Max 300KB for inlining
+        # Assets to inline (by tag and attribute)
+        asset_tags = {
+            'link': 'href',      # CSS files
+            'script': 'src',     # JS files
+            'img': 'src',        # Images
+            'source': 'src',     # Video/audio
+            'video': 'src',      # Video
+            'audio': 'src',      # Audio
+            'embed': 'src',      # Embeds
+            'iframe': 'src',     # Iframes
+        }
+
+        # Fonts to download and inline
+        font_extensions = ['.woff2', '.woff', '.ttf', '.otf', '.eot']
+
+        def is_inlineable(content, mime, max_size=2*1024*1024):
+            """Check if asset is inlineable (under max_size)"""
+            if not mime or not mime.strip():
+                return False
+            if not content or len(content) > max_size:
+                return False
+            inlineable_types = ['text/css', 'application/javascript', 'image/', 'font/', 'audio/', 'video/']
+            return any(t in mime for t in inlineable_types)
+
+        # Process all asset tags
+        for tag_name, attr in asset_tags.items():
+            for el in soup.find_all(tag_name):
+                src = el.get(attr) or el.get('data-src')
+                if not src:
+                    continue
+
+                # Handle root-relative URLs (/path) - convert to absolute to original domain
+                if src.startswith('/'):
+                    base_domain = urlparse(url).netloc
+                    src = f"https://{base_domain}{src}"
+                    el[attr] = src
+
+                # Resolve relative URLs
+                full_url = urljoin(url, src)
+                parsed = urlparse(full_url)
+
+                # Skip external domains except CDNs
+                base_domain = urlparse(url).netloc
+                if parsed.netloc and parsed.netloc != base_domain and not any(cdn in parsed.netloc for cdn in ['cdn.', 'assets.', 'static.', 'cloudflare']):
+                    is_font = any(ext in src.lower() for ext in font_extensions)
+                    if not is_font:
+                        el.decompose()
+                        continue
+
+                content, mime = download_file(full_url, timeout=15)
+                if not content or not mime:
+                    # Keep the absolute URL (not inlined, but points to correct domain)
+                    el[attr] = full_url
+                    continue
+
+                if not is_inlineable(content, mime):
+                    # Keep as-is (will be fetched from original domain)
+                    el[attr] = full_url
+                    continue
+
                 try:
                     b64 = base64.b64encode(content).decode()
-                    img['src'] = f"data:{mime};base64,{b64}"
-                    asset_count += 1
-                except:
-                    pass
+                    if mime == 'text/css' or src.endswith('.css'):
+                        css_text = content.decode('utf-8', errors='ignore') if isinstance(content, bytes) else content
+                        style_tag = soup.new_tag('style')
+                        style_tag.string = css_text
+                        el.replace_with(style_tag)
+                        asset_count += 1
+                    elif mime == 'application/javascript' and len(content) < 500000:
+                        el[attr] = f"data:{mime};base64,{b64}"
+                        asset_count += 1
+                    else:
+                        el[attr] = f"data:{mime};base64,{b64}"
+                        asset_count += 1
+                except Exception as e:
+                    # Keep the absolute URL if inlining fails
+                    el[attr] = full_url
+
+        # Also process inline styles that reference external URLs
+        for elem in soup.find_all(style=True):
+            style = elem.get('style', '')
+            import re as regex_module
+            url_pattern = regex_module.compile(r'url\([\'"]?([^\'"()]+)[\'"]?\)')
+            matches = url_pattern.findall(style)
+            for match in matches:
+                if match.startswith('data:'):
+                    continue
+                # Handle root-relative URLs
+                if match.startswith('/'):
+                    base_domain = urlparse(url).netloc
+                    match = f"https://{base_domain}{match}"
+                full_url = urljoin(url, match)
+                content, mime = download_file(full_url, timeout=10)
+                if content and mime:
+                    try:
+                        b64 = base64.b64encode(content).decode()
+                        style = style.replace(f'url({match})', f'url(data:{mime};base64,{b64})')
+                        elem['style'] = style
+                        asset_count += 1
+                    except:
+                        pass
 
         # Save HTML
         html_path = os.path.join(output_dir, 'index.html')
