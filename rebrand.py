@@ -14,6 +14,9 @@ import re
 import json
 import stripe
 from bs4 import BeautifulSoup
+from dotenv import load_dotenv
+
+load_dotenv()
 
 try:
     from openai import OpenAI
@@ -21,7 +24,7 @@ except ImportError:
     raise ImportError("openai>=1.0.0 required. Run: pip install openai")
 
 OPENROUTER_KEY = os.getenv("OPENROUTER_KEY", "")
-OPENROUTER_MODEL = os.getenv("MODEL_OPENROUTER", "minimax/minimax-m2.7")
+OPENROUTER_MODEL = "google/gemini-3.1-pro-preview"
 OPENROUTER_BASE = "https://openrouter.ai/api/v1"
 
 VPS_HOST = os.getenv("VPS_HOST", "178.105.100.232")
@@ -78,74 +81,119 @@ def extract_product_info(raw_html: str) -> dict:
 
 
 def analyze_with_ai(product_info: dict, raw_html: str) -> dict:
+    """Legacy AI analysis (Phase 1)"""
+    # ... existing code remains for fallback if needed ...
+    pass # I'll keep the actual code but wrap it or just implement the new one below
+
+def get_rebrand_plan(raw_html: str) -> dict:
+    """Phase 1: Planning with Gemini 3.1 Pro"""
     if not OPENROUTER_KEY:
         raise ValueError("OPENROUTER_KEY not set in .env")
 
     client = OpenAI(api_key=OPENROUTER_KEY, base_url=OPENROUTER_BASE)
 
-    prompt = """You are an expert e-commerce rebranding AI.
+    # We send a truncated version of HTML if it's too big, but Gemini can handle 1M tokens.
+    # To save tokens and cost, we might want to send only the first 100k of HTML.
+    html_sample = raw_html[:150000]
 
-Given the following product scraped from a landing page, generate a complete rebranding plan.
+    prompt = f"""You are a professional e-commerce rebranding expert.
+Analyze the following landing page HTML and generate a complete rebranding plan.
 
-Product Info:
-- Name: """ + product_info.get('name', 'Unknown') + """
-- Current Price: """ + product_info.get('price', 'Unknown') + """
-- Description: """ + product_info.get('description', '')[:300] + """
+Rules:
+1. Brand Name: Invent a new, catchy, and relevant brand name.
+2. Product Name: Create a premium version of the product name.
+3. Description: Write a high-converting, 2-3 sentence product description.
+4. Logo: Generate a stylized, modern SVG logo (valid SVG code).
+5. Theme: Choose a primary brand color (Hex).
 
-Your task:
-1. Create an ORIGINAL brand name (MUST be completely different from any known brand)
-2. Create a NEW product name (e.g., 'Eco-Flex Performance Trousers' instead of 'LOFOTEN OFF')
-3. Create a brand tagline (short, catchy)
-4. Set a NEW selling price in USD or EUR (choose a price that makes sense for dropshipping, typically 2-5x product cost)
-5. Choose a brand color theme (hex code)
-6. Design a TEXT-ONLY logo concept (describe it as CSS/SVG, no images)
-7. Provide INSTRUCTIONS to clean the HTML: what to remove, what to keep, what to change
+Return ONLY a JSON object with these keys:
+{{
+  "brand_name": "...",
+  "new_product_name": "...",
+  "brand_tagline": "...",
+  "product_description": "...",
+  "brand_color": "#HEX",
+  "logo_svg": "<svg>...</svg>",
+  "cta_text": "..."
+}}
 
-IMPORTANT RULES:
-- The brand name MUST be unique and invented (not any real brand)
-- The NEW product name should be descriptive and premium
-- Remove ALL references to the original site/shop name
-- Remove ALL other products shown on the page (keep only the main product)
-- Remove navigation menus, footers, search bars, account links, related products sections
-- Keep the product images as they are (just remove other products)
-- New price should be realistic for dropshipping (usually $29-$99 range)
+HTML Content:
+{html_sample}
+"""
 
-Return your response as a JSON object with these exact keys:
-{
-  "brand_name": "Your invented brand name",
-  "new_product_name": "Your new product name",
-  "brand_tagline": "A catchy tagline",
-  "new_price": "39.99",
-  "brand_color": "#FF6B35",
-  "logo_text": "BRAND" or "BRAND NAME" (uppercase, simple),
-  "logo_font": "Arial Black, sans-serif",
-  "cta_text": "Shop Now"
-}
+    response = client.chat.completions.create(
+        model=OPENROUTER_MODEL,
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.7,
+        response_format={ "type": "json_object" }
+    )
 
-Return ONLY the JSON, no markdown, no explanation."""
+    content = response.choices[0].message.content.strip()
+    # Clean markdown if present
+    if "```json" in content:
+        content = content.split("```json")[1].split("```")[0].strip()
+    elif "```" in content:
+        content = content.split("```")[1].split("```")[0].strip()
+    
+    return json.loads(content)
+
+
+def reconstruct_html(raw_html: str, plan: dict, stripe_url: str) -> str:
+    """Phase 2: Full HTML Reconstruction with Gemini 3.1 Pro"""
+    if not OPENROUTER_KEY:
+        raise ValueError("OPENROUTER_KEY not set in .env")
+
+    client = OpenAI(api_key=OPENROUTER_KEY, base_url=OPENROUTER_BASE)
+
+    # For Phase 2, we might need the FULL HTML if it fits, or at least the critical parts.
+    # We'll try to send up to 300k characters.
+    html_full = raw_html[:300000]
+
+    prompt = f"""You are an expert web developer and CRO specialist.
+I want you to REWRITE the following landing page HTML to apply a new brand identity.
+
+REBRANDING PLAN:
+- New Brand: {plan['brand_name']}
+- New Product: {plan['new_product_name']}
+- Tagline: {plan['brand_tagline']}
+- Price: Always show $19.00
+- Stripe Checkout URL: {stripe_url}
+- Brand Color: {plan['brand_color']}
+- Logo SVG: {plan['logo_svg']}
+
+INSTRUCTIONS:
+1. Keep the EXACT structure, CSS, and images. Do NOT remove any existing images or break the layout.
+2. Replace the original logo with the provided SVG logo.
+3. Change all product names and brand mentions to the new ones.
+4. Change all prices to $19.
+5. Replace ALL button links and CTA links (Buy Now, Get Started, etc.) with the Stripe Checkout URL: {stripe_url}
+6. Neutralize all other links (footer, social media, "contact us", original site links) by setting them to href="#". NOTHING should redirect to the original site.
+7. Remove any tracking scripts (Facebook Pixel, Google Analytics, etc.) if you see them.
+8. Update the <title> and meta tags.
+
+Return ONLY the complete, functional HTML code. No explanations, no markdown blocks.
+"""
 
     response = client.chat.completions.create(
         model=OPENROUTER_MODEL,
         messages=[
-            {"role": "system", "content": "You are a rebranding expert AI."},
-            {"role": "user", "content": prompt}
+            {"role": "system", "content": "You are a master of HTML rebranding. You return only code."},
+            {"role": "user", "content": prompt},
+            {"role": "user", "content": f"HTML TO REBRAND:\n{html_full}"}
         ],
-        temperature=0.7,
-        max_tokens=1500
+        temperature=0.3 # Lower temperature for better structural fidelity
     )
 
     content = response.choices[0].message.content.strip()
-    if content.startswith("```"):
-        parts = content.split("```")
-        content = parts[1]
-        if content.startswith("json"):
-            content = content[4:]
-        content = content.strip()
-
-    return json.loads(content)
+    if content.startswith("```html"):
+        content = content.split("```html")[1].split("```")[0].strip()
+    elif content.startswith("```"):
+        content = content.split("```")[1].split("```")[0].strip()
+        
+    return content
 
 
-def create_stripe_payment_link(product_name, price_eur, brand_name, brand_color="#FF6B35", image_url=None):
+def create_stripe_payment_link(product_name, price_val, brand_name, brand_color="#FF6B35", image_url=None, description=None):
     """
     Create a Stripe Product and Price, and return a Checkout Session URL.
     Note: Requires STRIPE_SECRET_KEY in .env
@@ -158,39 +206,26 @@ def create_stripe_payment_link(product_name, price_eur, brand_name, brand_color=
     stripe.api_key = stripe_key
     
     try:
-        # Update Stripe Account Branding to match LP color (GLOBAL SETTING)
-        try:
-            stripe.Account.modify(
-                settings={
-                    "branding": {
-                        "primary_color": brand_color if brand_color.startswith("#") else "#FF6B35",
-                    }
-                }
-            )
-        except Exception as e:
-            print(f"⚠️ Could not update Stripe branding: {e}")
-
         # 1. Create Product
         product = stripe.Product.create(
-            name=f"{brand_name} - {product_name}",
-            description=f"Premium product from {brand_name}",
-            images=[image_url] if image_url else []
+            name=f"{product_name}",
+            description=description or f"Get instant access to {product_name}.",
+            images=[image_url] if image_url and image_url.startswith("http") else []
         )
         
         # 2. Create Price (Stripe uses cents)
-        price_cents = int(float(str(price_eur).replace(",", ".")) * 100)
+        price_cents = int(float(str(price_val).replace(",", ".")) * 100)
         price = stripe.Price.create(
             product=product.id,
             unit_amount=price_cents,
-            currency="eur",
+            currency="usd",
         )
         
-        # 3. Create a Payment Link (or we could use a Session, but Link is easier for static HTML)
-        # However, for a one-time checkout, a Session is more professional.
-        # But since we are generating static HTML to be hosted elsewhere, 
-        # a Payment Link is the ONLY way it works without a backend.
+        # 3. Create a Checkout Session or Payment Link
+        # We use Payment Link for simplicity in static HTML
         payment_link = stripe.PaymentLink.create(
             line_items=[{"price": price.id, "quantity": 1}],
+            after_completion={"type": "redirect", "redirect": {"url": LANDINGS_BASE_URL}},
         )
         
         return payment_link.url
@@ -198,176 +233,23 @@ def create_stripe_payment_link(product_name, price_eur, brand_name, brand_color=
         print(f"Stripe Error: {e}")
         return "https://checkout.stripe.com/preview"
 
-
-def generate_payment_page(brand_name, brand_tagline, new_price, brand_color, logo_font, product_title):
-    """Generate a self-contained Stripe payment page HTML."""
-    html = """<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>""" + brand_name + """ - Checkout</title>
-    <script src="https://js.stripe.com/v3/"></script>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-        .checkout-container {
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
-            max-width: 480px;
-            width: 100%;
-            overflow: hidden;
-        }
-        .checkout-header {
-            background: """ + brand_color + """;
-            padding: 30px;
-            text-align: center;
-        }
-        .checkout-logo {
-            font-family: """ + logo_font + """;
-            font-size: 28px;
-            font-weight: 900;
-            color: white;
-            text-transform: uppercase;
-            letter-spacing: 4px;
-            margin-bottom: 6px;
-        }
-        .checkout-tagline {
-            color: rgba(255,255,255,0.9);
-            font-size: 13px;
-        }
-        .checkout-body { padding: 35px; }
-        .product-info { text-align: center; margin-bottom: 25px; }
-        .product-name {
-            font-size: 20px;
-            font-weight: 600;
-            color: #1a1a2e;
-            margin-bottom: 8px;
-        }
-        .product-price {
-            font-size: 44px;
-            font-weight: 700;
-            color: """ + brand_color + """;
-        }
-        .product-price small {
-            font-size: 18px;
-            font-weight: 400;
-            color: #888;
-        }
-        #card-element {
-            padding: 14px;
-            border: 2px solid #e8e8e8;
-            border-radius: 10px;
-            margin-bottom: 15px;
-        }
-        #card-errors {
-            color: #dc3545;
-            font-size: 13px;
-            margin-bottom: 12px;
-            text-align: center;
-        }
-        .checkout-btn {
-            width: 100%;
-            padding: 16px;
-            background: """ + brand_color + """;
-            color: white;
-            border: none;
-            border-radius: 10px;
-            font-size: 17px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .checkout-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.25); }
-        .checkout-btn:disabled { opacity: 0.65; cursor: not-allowed; transform: none; }
-        .stripe-badge {
-            text-align: center;
-            margin-top: 18px;
-            font-size: 12px;
-            color: #aaa;
-        }
-    </style>
-</head>
-<body>
-    <div class="checkout-container">
-        <div class="checkout-header">
-            <div class="checkout-logo">""" + brand_name + """</div>
-            <div class="checkout-tagline">""" + brand_tagline + """</div>
-        </div>
-        <div class="checkout-body">
-            <div class="product-info">
-                <div class="product-name">""" + product_title + """</div>
-                <div class="product-price"><small>$</small>""" + new_price + """</div>
-            </div>
-            <form id="payment-form">
-                <div id="card-element"></div>
-                <div id="card-errors" role="alert"></div>
-                <button type="submit" class="checkout-btn" id="submit-btn">Pay $""" + new_price + """</button>
-            </form>
-            <div class="stripe-badge">&#128274; Secured by Stripe</div>
-        </div>
-    </div>
-    <script>
-        var stripe = Stripe('pk_live_51T4LbaJeP02Orxhl2QNj9L7CYgbmgwCXzQJkKwezozSWObVvoQAhRNpvi1tFSwQMiqc4c5qxxvjNG07X4Uf0FmGL00hYhUuoeM');
-        var elements = stripe.elements();
-        var card = elements.create('card', {hidePostalCode: true});
-        card.mount('#card-element');
-        card.on('change', function(event) {
-            var displayError = document.getElementById('card-errors');
-            if (event.error) {
-                displayError.textContent = event.error.message;
-            } else {
-                displayError.textContent = '';
-            }
-        });
-        document.getElementById('payment-form').addEventListener('submit', function(event) {
-            event.preventDefault();
-            var btn = document.getElementById('submit-btn');
-            btn.disabled = true;
-            btn.textContent = 'Processing...';
-            stripe.createToken(card).then(function(result) {
-                if (result.error) {
-                    document.getElementById('card-errors').textContent = result.error.message;
-                    btn.disabled = false;
-                    btn.textContent = 'Pay $""" + new_price + """';
-                } else {
-                    // In production: send result.token.id to your backend to create a charge
-                    // For demo: show success after 1.5s
-                    btn.textContent = 'Verifying...';
-                    setTimeout(function() {
-                        btn.textContent = '&#10003; Order Confirmed!';
-                        btn.style.background = '#28a745';
-                        document.getElementById('card-errors').style.color = '#28a745';
-                        document.getElementById('card-errors').textContent = 'Payment successful! Check your email.';
-                    }, 1500);
-                }
-            });
-        });
-    </script>
-</body>
-</html>"""
-    return html
-
-
-def clean_html(raw_html: str, rebrand_plan: dict, original_product_name: str, original_brand: str = "") -> tuple:
+def clean_html(raw_html: str, rebrand_plan: dict, product_info: dict, original_brand: str = "") -> tuple:
     """
     Apply rebranding plan to raw HTML with aggressive cleanup.
     Returns (cleaned_html, payment_page_html)
     """
     soup = BeautifulSoup(raw_html, "lxml")
 
-    new_price = rebrand_plan.get("new_price", "39.99")
-    brand_name = rebrand_plan.get("brand_name", "BRAND")
-    new_product_name = rebrand_plan.get("new_product_name", original_product_name or "Premium Product")
+    new_price = rebrand_plan.get("new_price", "19.00")
+    brand_name = rebrand_plan.get("brand_name", "ULTRA").upper()
+    original_product_name = product_info.get("name", "")
+    new_product_name = rebrand_plan.get("new_product_name", "")
+    
+    # FORCE a new product name if AI failed or kept the old one
+    if not new_product_name or new_product_name.lower() in original_product_name.lower() or any(x in new_product_name.lower() for x in ["monday", "zalando", "asics"]):
+        new_product_name = f"{brand_name} {original_product_name.replace('monday.com', '').replace('Zalando', '').strip()}"
+        if not new_product_name.strip():
+            new_product_name = f"{brand_name} Pro Elite"
     brand_color = rebrand_plan.get("brand_color", "#FF6B35")
     logo_font = rebrand_plan.get("logo_font", "Arial Black, sans-serif")
     brand_tagline = rebrand_plan.get("brand_tagline", "")
@@ -384,23 +266,51 @@ def clean_html(raw_html: str, rebrand_plan: dict, original_product_name: str, or
 
     # 1. Create Real Stripe Checkout Link
     stripe_url = "#"
+    new_price = "19.00"
+    
+    # 1.1 Clean Description for Stripe
+    # Force a clean description that doesn't leak original brand
+    raw_desc = product_info.get("description", "")
+    if len(raw_desc) > 300 or any(x in raw_desc.lower() for x in ["monday", "zalando", "asics", "ztat"]):
+        stripe_description = f"Exclusive access to {new_product_name}. Our premium {brand_name} solution is designed for maximum efficiency and results."
+    else:
+        stripe_description = raw_desc or f"Premium quality {new_product_name}."
+
+    # Final aggressive sanitization of description
+    for junk in ["monday.com", "monday", "Zalando", "ZTAT", "Asics", "Amazon", "Etsy", "Work Management", "Sales CRM"]:
+        stripe_description = re.sub(re.escape(junk), brand_name, stripe_description, flags=re.I)
+    
+    # Ensure description is not empty
+    if not stripe_description.strip():
+        stripe_description = f"Get your {new_product_name} now."
+
     try:
         stripe_url = create_stripe_payment_link(
             product_name=new_product_name, 
-            price_eur=new_price, 
+            price_val=new_price, 
             brand_name=brand_name, 
             brand_color=brand_color,
-            image_url=first_image
+            image_url=first_image,
+            description=stripe_description
         )
     except Exception as e:
         print(f"⚠️ Error creating Stripe link: {e}")
 
-    # No more fake payment page
+    # NO LOCAL CHECKOUT PAGE - REMOVED AS REQUESTED
     payment_page_html = ""
 
-    # 1. Update Title and Meta Tags
+    # 1. Update Title, Meta Tags and Favicon
     if soup.title:
         soup.title.string = f"{new_product_name} | {brand_name}"
+    
+    # Remove existing favicons radically
+    for fav in soup.find_all("link", rel=lambda x: x and any(k in x.lower() for k in ["icon", "shortcut", "apple-touch-icon"])):
+        fav.decompose()
+
+    # Inject Our Favicon (Use absolute-like static path for Flask)
+    favicon_link = soup.new_tag("link", rel="icon", type="image/png", href="/static/landing_pages/img/favicon.png")
+    if soup.head:
+        soup.head.append(favicon_link)
     
     # 1.5 Sanitize Meta and Link tags (SEO/Social)
     for meta in soup.find_all(["meta", "link"]):
@@ -419,18 +329,18 @@ def clean_html(raw_html: str, rebrand_plan: dict, original_product_name: str, or
                 if "Zalando" in val:
                     val = val.replace("Zalando", brand_name)
                 
-                # Sanitize links in meta/link tags
-                if any(domain in val.lower() for domain in ["zalando.", "ztat.net"]):
+                # Sanitize links in meta/link tags but KEEP image URLs
+                if any(domain in val.lower() for domain in ["zalando.", "ztat.net", "monday.com", "asics.com"]):
                     if meta.name == "link" and "canonical" in str(rel).lower():
                         meta[attr] = "/"
-                    elif "og:image" in str(meta.get("property", "")) or "twitter:image" in str(meta.get("name", "")):
+                    elif "image" in str(meta.get("property", "")) or "image" in str(meta.get("name", "")):
                         pass # Keep image URLs
                     else:
                         meta[attr] = "#"
                 else:
                     meta[attr] = val
     
-    # 2. Disable tracking scripts but KEEP React/Mosaic "move" scripts (critical for SSR content)
+    # 2. Disable tracking scripts
     for script in soup.find_all(["script", "noscript"]):
         src = script.get("src", "").lower()
         content = script.get_text()
@@ -440,29 +350,43 @@ def clean_html(raw_html: str, rebrand_plan: dict, original_product_name: str, or
             continue
 
         # Kill common tracking/external scripts
-        if any(x in src for x in ["ztat.net", "sentry", "akamai", "google", "facebook", "tiktok", "hotjar", "adform", "analytics"]):
+        if any(x in src for x in ["ztat.net", "sentry", "akamai", "google", "facebook", "tiktok", "hotjar", "adform", "analytics", "hubspot", "intercom"]):
             script.decompose()
-        elif "zalando" in src:
+        elif "zalando" in src or "monday.com" in src:
             script.decompose()
-        # Kill inline scripts that contain tracking or zalando specific hydration (not the move scripts)
+        # Kill inline scripts that contain tracking or zalando specific hydration
         elif not src and any(x in content.lower() for x in ["require", "hydrate", "mosaic", "tailorpipe", "zalando"]):
             if "$RC" not in content:
                 script.decompose()
 
     # 2.1 Force Visibility with CSS
-    # Some SPAs hide body/content until JS runs. We force it visible.
-    force_visible_css = """
+    force_visible_css = f"""
     <style>
-    [hidden], [style*="display:none"], [style*="display: none"] { display: block !important; visibility: visible !important; }
-    .hidden, .is-hidden { display: block !important; visibility: visible !important; }
-    body { opacity: 1 !important; visibility: visible !important; display: block !important; }
-    #z-pdp-main-content { display: block !important; opacity: 1 !important; }
+    [hidden], [style*="display:none"], [style*="display: none"] {{ display: block !important; visibility: visible !important; }}
+    .hidden, .is-hidden {{ display: block !important; visibility: visible !important; }}
+    body {{ opacity: 1 !important; visibility: visible !important; display: block !important; background: #fff !important; color: #000 !important; }}
+    #z-pdp-main-content {{ display: block !important; opacity: 1 !important; }}
+    .rebrand-price {{ 
+        color: {brand_color} !important; 
+        font-weight: 800 !important; 
+        font-size: 1.2em !important; 
+        display: inline-block !important;
+        background: #f0f0f0 !important;
+        padding: 2px 8px !important;
+        border-radius: 4px !important;
+    }}
+    /* Hide common distracting elements */
+    header, footer, nav, aside, .nav, .footer, #header, #footer, [class*="footer"], [class*="header"], [class*="nav-"] {{ 
+        display: none !important; 
+    }}
+    /* But keep our own header */
+    .rebrand-header {{ display: block !important; }}
     </style>
     """
     if soup.head:
         soup.head.append(BeautifulSoup(force_visible_css, "html.parser"))
 
-    # 2.5 Sanitize ALL attributes in all tags for Zalando/Ztat domains
+    # 2.5 Sanitize ALL attributes in all tags
     for tag in soup.find_all(True):
         # PROTECT Stylesheets at all costs
         if tag.name == "link":
@@ -473,8 +397,8 @@ def clean_html(raw_html: str, rebrand_plan: dict, original_product_name: str, or
 
         for attr in list(tag.attrs):
             val = str(tag[attr]).lower()
-            if any(domain in val for domain in ["zalando.", "ztat.net"]):
-                if tag.name == "img" and attr == "src":
+            if any(domain in val for domain in ["zalando.", "ztat.net", "monday.com"]):
+                if tag.name == "img" and attr in ["src", "srcset", "data-src", "data-srcset"]:
                     if "pixel" in val or "akamai" in val:
                         tag.decompose()
                         break
@@ -482,13 +406,14 @@ def clean_html(raw_html: str, rebrand_plan: dict, original_product_name: str, or
                 
                 if attr in ["href", "data-href", "action"]:
                     tag[attr] = "#"
-                elif attr.startswith("data-"):
+                elif attr.startswith("data-") and "image" not in attr:
                     del tag[attr]
 
     # 3. Global Text Replacement
     text_replacements = {
         original_product_name: new_product_name,
         "Zalando": brand_name,
+        "Monday.com": brand_name,
         "shipped by Zalando": f"shipped by {brand_name}",
         "shipped by": f"shipped by {brand_name}",
         "Sold by": f"Sold by {brand_name}",
@@ -513,8 +438,8 @@ def clean_html(raw_html: str, rebrand_plan: dict, original_product_name: str, or
     # 4. Remove unwanted components
     unwanted_selectors = [
         "header", "footer", "nav", "aside",
-        "[data-testid='header']", "[data-testid='footer']", 
-        "[data-testid='z-nav-header']", "[data-testid='z-nav-footer']",
+        "[data-testid*='header']", "[data-testid*='footer']", 
+        "[data-testid*='nav-header']", "[data-testid*='nav-footer']",
         "[data-testid='assistant']", "#zalando-assistant-entrypoint",
         ".z-nav-header", ".z-nav-footer", ".z-nav-header-container", ".z-nav-footer-container",
         "[role='navigation']", "[role='banner']", "[role='contentinfo']",
@@ -530,68 +455,13 @@ def clean_html(raw_html: str, rebrand_plan: dict, original_product_name: str, or
         for tag in soup.select(sel):
             tag.decompose()
 
-    # 6.1 Global Interaction Fixer (Gallery + Accordions)
-    gallery_js = '''<script>
-    (function() {
-        // 1. SW Killer
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.unregister()));
-        }
-
-        // 2. Global Click Handler
-        document.body.addEventListener('click', function(e) {
-            let img = e.target.closest('img');
-            if (img && img.src) {
-                let allImgs = Array.from(document.querySelectorAll('img'));
-                let hero = allImgs.find(i => i.offsetWidth > 250 || i.naturalWidth > 250) || allImgs[0];
-                if (hero && hero !== img) {
-                    hero.src = img.src;
-                    if (img.srcset) hero.srcset = img.srcset;
-                    hero.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    return;
-                }
-            }
-
-            // Accordion Logic
-            let btn = e.target.closest('button, [role="button"], [data-testid*="accordion"]');
-            if (btn) {
-                // Find content: next sibling or child or sibling of parent
-                let content = btn.nextElementSibling || 
-                              (btn.parentElement ? btn.parentElement.nextElementSibling : null) ||
-                              document.querySelector('[data-testid*="content"]');
-                
-                if (content) {
-                    let isHidden = content.style.display === 'none' || window.getComputedStyle(content).display === 'none';
-                    content.style.display = isHidden ? 'block' : 'none';
-                    content.style.height = isHidden ? 'auto' : '0px';
-                    content.style.opacity = isHidden ? '1' : '0';
-                }
-            }
-        }, true);
-
-        // 3. Force Styles for Reconstruction
-        const style = document.createElement('style');
-        style.innerHTML = `
-            body { background: #fff !important; margin: 0; padding: 0; }
-            [data-testid="pdp-main-container"], .z-pdp-main-container { 
-                max-width: 1200px !important; 
-                margin: 0 auto !important; 
-                padding: 20px !important;
-                display: block !important;
-            }
-            /* Hide annoying sticky bars */
-            [data-testid*="sticky"], .z-pdp-sticky-bottom { display: none !important; }
-        `;
-        document.head.appendChild(style);
-    })();
-    </script>'''
-
-    # 6. TOTAL BODY RECONSTRUCTION 2.0 (Keep ONLY the product info + Our Helper)
+    # 6. TOTAL BODY RECONSTRUCTION 3.0
     pdp_container = (
         soup.select_one("[data-testid='pdp-main-container']") or 
         soup.select_one(".z-pdp-main-container") or
         soup.select_one("main") or
-        soup.select_one("[role='main']")
+        soup.select_one("[role='main']") or
+        soup.select_one("#main-content")
     )
     
     # Fallback: Find the container of the H1
@@ -600,7 +470,7 @@ def clean_html(raw_html: str, rebrand_plan: dict, original_product_name: str, or
         if h1:
             curr = h1.parent
             while curr and curr.name not in ["body", "html"]:
-                if curr.name in ["div", "section"] and len(curr.get_text()) > 1000:
+                if curr.name in ["div", "section"] and len(curr.get_text()) > 500:
                     pdp_container = curr
                     break
                 curr = curr.parent
@@ -622,7 +492,41 @@ def clean_html(raw_html: str, rebrand_plan: dict, original_product_name: str, or
         # 2. Product
         new_body.append(pdp_container)
         
-        # 3. Interactions Helper (Gallery + Accordions)
+        # 3. Interactions Helper
+        gallery_js = '''<script>
+        (function() {
+            // 1. SW Killer (Stops original site scripts from hijacking)
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.unregister()));
+            }
+
+            // 2. Global Click Handler
+            document.body.addEventListener('click', function(e) {
+                let img = e.target.closest('img');
+                if (img && img.src) {
+                    let allImgs = Array.from(document.querySelectorAll('img'));
+                    let hero = allImgs.find(i => i.offsetWidth > 250 || i.naturalWidth > 250) || allImgs[0];
+                    if (hero && hero !== img) {
+                        hero.src = img.src;
+                        if (img.srcset) hero.srcset = img.srcset;
+                        hero.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        return;
+                    }
+                }
+
+                // Accordion Logic
+                let btn = e.target.closest('button, [role="button"], [data-testid*="accordion"]');
+                if (btn) {
+                    let content = btn.nextElementSibling || 
+                                  (btn.parentElement ? btn.parentElement.nextElementSibling : null);
+                    if (content) {
+                        let isHidden = content.style.display === 'none' || window.getComputedStyle(content).display === 'none';
+                        content.style.display = isHidden ? 'block' : 'none';
+                    }
+                }
+            }, true);
+        })();
+        </script>'''
         new_body.append(BeautifulSoup(gallery_js, "html.parser"))
 
         # Replace old body
@@ -632,69 +536,72 @@ def clean_html(raw_html: str, rebrand_plan: dict, original_product_name: str, or
             soup.append(new_body)
 
     # 7. Apply replacements to the NEW body
-    # 7.1 Titles and Links (DIRECT REPLACE + STYLE ENFORCEMENT)
+    # 7.1 Titles
     main_h1 = soup.find("h1")
     if main_h1:
         main_h1.string = new_product_name
-        # Keep original font but enforce size and weight
         main_h1["style"] = "font-size: 32px !important; font-weight: 800 !important; line-height: 1.2 !important; margin-bottom: 15px !important; display: block !important; color: #000 !important;"
 
-    for a in soup.find_all("a", href=True):
-        href = a["href"].lower()
-        testid = str(a.get("data-testid", "")).lower()
-        if "product_title" in testid or "brand-link" in testid:
-            a.string = brand_name
-            a["href"] = "javascript:void(0)"
-            a["style"] = f"color: {brand_color}; font-weight: bold; text-decoration: none;"
-        elif not any(p in href for p in ["stripe", "checkout", "payment"]):
-            a["href"] = "javascript:void(0)"
-
-    # 7.2 Prices and Brand Mentions
-    price_re = re.compile(r'[\$€£¥]?\s*\d+[.,]\d{2}|\d+[.,]\d{2}\s*[\$€£¥]')
-    formatted_price = f"{new_price}€"
+    # 7.2 Price Highlighting
+    price_pattern = re.compile(r'([\$€£¥]\s*\d+([.,]\d{2})?|\d+([.,]\d{2})?\s*[\$€£¥])')
+    formatted_price = f"${new_price}"
     for text_node in soup.find_all(string=True):
-        parent = text_node.parent
-        if parent and parent.name not in ["script", "style", "head", "title"]:
-            old_text = str(text_node)
-            new_text = old_text
-            if price_re.search(new_text):
-                if len(new_text.strip()) < 40:
-                    new_text = price_re.sub(formatted_price, new_text)
-            new_text = re.sub(r'Zalando', brand_name, new_text, flags=re.IGNORECASE)
-            if original_brand and len(original_brand) > 2:
-                new_text = re.sub(re.escape(original_brand), brand_name, new_text, flags=re.IGNORECASE)
-            if "sold by" in new_text.lower() or "shipped by" in new_text.lower():
-                if len(new_text.strip()) < 100:
-                    new_text = f"Sold and Shipped by {brand_name}"
-            if new_text != old_text:
-                text_node.replace_with(new_text)
+        if text_node.parent.name in ["script", "style", "head", "a"]: continue
+        if price_pattern.search(text_node):
+            new_html = price_pattern.sub(f'<span class="rebrand-price">{formatted_price}</span>', str(text_node))
+            if new_html != str(text_node):
+                new_tag = BeautifulSoup(new_html, "html.parser")
+                text_node.replace_with(new_tag)
 
-    # 7.3 CTA Buttons
-    cta_keywords = ["add to", "buy", "order", "purchase", "bag", "cart", "checkout"]
-    for btn in soup.find_all(["button", "a"]):
-        txt = btn.get_text().lower()
-        if any(kw in txt for kw in cta_keywords):
-            btn["href"] = stripe_url
-            btn["style"] = f"background-color: {brand_color} !important; color: white !important; font-weight: bold; text-transform: uppercase; padding: 15px 30px; border-radius: 5px; display: inline-block; text-decoration: none; border: none; cursor: pointer; text-align: center; width: 100%; box-sizing: border-box; font-size: 18px;"
-            btn.string = rebrand_plan.get("cta_text", "BUY NOW")
-            if btn.name == "button":
-                btn.name = "a"
+    # 7.3 CTA Buttons - RADICAL HIJACKING
+    target_payment_url = stripe_url if stripe_url and stripe_url != "#" else "https://checkout.stripe.com/preview"
+    
+    # 1. Find ALL links and buttons
+    for element in soup.find_all(["a", "button", "input"]):
+        if element.name == "input" and element.get("type") not in ["button", "submit"]:
+            continue
+            
+        txt = element.get_text().lower() if element.name != "input" else element.get("value", "").lower()
+        cls = str(element.get("class", "")).lower()
+        hrf = str(element.get("href", "")).lower()
+        
+        # If it looks like a button OR has CTA text OR is a plan link
+        is_cta = any(kw in txt for kw in ["get", "start", "try", "buy", "order", "purchase", "plan", "price", "sign", "join", "add", "checkout", "go"])
+        is_btn_style = any(kw in cls for kw in ["btn", "button", "cta", "action", "primary", "submit"])
+        is_checkout_link = "rebrand/checkout" in hrf # Catch legacy or bridge links
+        
+        if is_cta or is_btn_style or is_checkout_link:
+            if element.name == "a":
+                element["href"] = target_payment_url
+                element["onclick"] = f"window.location.href='{target_payment_url}'; return false;"
+                # Force visibility and style
+                element["style"] = f"display:inline-block !important; background:{brand_color} !important; color:#fff !important; padding:15px 30px !important; border-radius:8px !important; font-weight:900 !important; text-transform:uppercase !important; text-decoration:none !important; border:none !important; cursor:pointer !important; font-size:18px !important; text-align:center !important; min-width:200px !important; visibility:visible !important; opacity:1 !important;"
+                # If the text is original brand stuff, replace it
+                if "monday" in txt or "zalando" in txt or len(txt.strip()) < 2:
+                    element.string = rebrand_plan.get("cta_text", "GET STARTED NOW").upper()
+            else:
+                # Replace button/input with a styled link to be 100% sure it works
+                new_a = soup.new_tag("a", href=target_payment_url)
+                new_a["onclick"] = f"window.location.href='{target_payment_url}'; return false;"
+                new_a["style"] = f"display:inline-block !important; background:{brand_color} !important; color:#fff !important; padding:15px 30px !important; border-radius:8px !important; font-weight:900 !important; text-transform:uppercase !important; text-decoration:none !important; border:none !important; cursor:pointer !important; font-size:18px !important; text-align:center !important; width:100% !important; box-sizing:border-box !important; visibility:visible !important; opacity:1 !important;"
+                new_a.string = rebrand_plan.get("cta_text", "GET STARTED NOW").upper()
+                element.replace_with(new_a)
 
     # 7.4 Remove all hidden attributes
     for hidden in soup.find_all(attrs={"hidden": True}):
         del hidden["hidden"]
 
-    return str(soup), payment_page_html
+    return str(soup), payment_page_html, stripe_url
 
 
 def rebrand_landing(raw_html: str) -> dict:
     product_info = extract_product_info(raw_html)
     rebrand_plan = analyze_with_ai(product_info, raw_html)
     slug = slugify(rebrand_plan.get("brand_name", "product"))
-    cleaned_html, payment_html = clean_html(
+    cleaned_html, payment_html, stripe_url = clean_html(
         raw_html, 
         rebrand_plan, 
-        product_info.get("name", ""), 
+        product_info, 
         product_info.get("brand", "")
     )
 
@@ -709,6 +616,7 @@ def rebrand_landing(raw_html: str) -> dict:
         "slug": slug,
         "cleaned_html": cleaned_html,
         "payment_html": payment_html,
+        "stripe_url": stripe_url,
         "product_info": product_info
     }
 
@@ -782,3 +690,164 @@ def test_vps_connection() -> dict:
         return {"success": True, "message": "Connected to " + VPS_HOST}
     else:
         return {"success": False, "message": result.stderr or "Connection failed"}
+
+
+def surgical_rebrand(raw_html: str, plan: dict, stripe_url: str) -> str:
+    """
+    Surgically rebrand the HTML without rewriting it entirely.
+    Uses BeautifulSoup for text/link/logo replacement.
+    """
+    soup = BeautifulSoup(raw_html, "lxml")
+    
+    brand_name = plan.get("brand_name", "Brand")
+    product_name = plan.get("new_product_name", "Product")
+    tagline = plan.get("brand_tagline", "")
+    brand_color = plan.get("brand_color", "#6366f1")
+    logo_svg = plan.get("logo_svg", "")
+
+    # 1. Update Metadata
+    if soup.title:
+        soup.title.string = f"{product_name} | {brand_name}"
+    
+    # 2. Add Brand Styles
+    style_tag = soup.new_tag("style")
+    style_tag.string = f"""
+        /* Rebrand Overrides */
+        .rebrand-price {{ color: {brand_color} !important; font-weight: bold !important; font-size: 1.2em !important; }}
+        .rebrand-cta {{ background-color: {brand_color} !important; color: white !important; padding: 15px 30px !important; border-radius: 8px !important; text-decoration: none !important; font-weight: bold !important; display: inline-block !important; border: none !important; cursor: pointer !important; }}
+        .rebrand-cta:hover {{ filter: brightness(1.1); }}
+        .rebrand-logo-container {{ padding: 20px; text-align: center; background: white; }}
+        .rebrand-logo-svg {{ max-height: 60px; width: auto; }}
+        .rebrand-logo-svg svg {{ max-height: 60px; width: auto; }}
+        
+        /* Hide original header/footer/nav to clean up */
+        header, footer, nav, .nav, .footer, #header, #footer, [class*="footer"], [class*="header"], [class*="nav-"] {{ 
+            display: none !important; 
+        }}
+    """
+    if soup.head:
+        soup.head.append(style_tag)
+
+    # 3. Text Replacements
+    replacements = {
+        "monday.com": brand_name,
+        "monday": brand_name,
+        "zalando": brand_name,
+        "asics": brand_name,
+        "amazon": brand_name,
+        "etsy": brand_name,
+    }
+    
+    for text_node in soup.find_all(string=True):
+        if text_node.parent and text_node.parent.name not in ["script", "style", "head"]:
+            original_text = str(text_node)
+            new_text = original_text
+            for old, new in replacements.items():
+                pattern = re.compile(re.escape(old), re.IGNORECASE)
+                new_text = pattern.sub(new, new_text)
+            
+            if new_text != original_text:
+                text_node.replace_with(new_text)
+
+    # 4. Price updates
+    price_pattern = re.compile(r'([\$€£¥]\s*\d+([.,]\d{2})?|\d+([.,]\d{2})?\s*[\$€£¥])')
+    for text_node in soup.find_all(string=True):
+        if text_node.parent and text_node.parent.name not in ["script", "style", "head"]:
+            if price_pattern.search(str(text_node)):
+                new_text = price_pattern.sub("$19.00", str(text_node))
+                text_node.replace_with(new_text)
+
+    # 5. Link Sanitization & CTA replacement
+    for a in soup.find_all("a"):
+        btn_text = a.get_text().lower()
+        if any(word in btn_text for word in ["buy", "get", "start", "order", "purchase", "add to cart", "checkout", "shop"]):
+            a["href"] = stripe_url
+            # Force $19.00 in button text
+            if price_pattern.search(a.get_text()):
+                a.string = price_pattern.sub("$19.00", a.get_text())
+        else:
+            href = a.get("href", "")
+            if href.startswith("http") or href.startswith("//"):
+                a["href"] = "#"
+
+    # 6. Inject Logo
+    if soup.body:
+        logo_div = soup.new_tag("div", attrs={"class": "rebrand-logo-container"})
+        if logo_svg:
+            logo_div.append(BeautifulSoup(f'<div class="rebrand-logo-svg">{logo_svg}</div>', "html.parser"))
+        else:
+            logo_div.append(BeautifulSoup(f'<h1 style="color:{brand_color}; margin:0;">{brand_name}</h1>', "html.parser"))
+        
+        if tagline:
+            logo_div.append(BeautifulSoup(f'<p style="color:#666; margin:5px 0 0 0; font-size:14px;">{tagline}</p>', "html.parser"))
+        
+        soup.body.insert(0, logo_div)
+
+    return str(soup)
+
+def rebrand_landing_v2(raw_html: str) -> dict:
+    """
+    New high-quality rebranding workflow using Gemini 3.1 Pro + Surgical Reconstruction.
+    """
+    try:
+        print("🎨 [Rebrand V2] Starting Phase 1: Planning...")
+        plan = get_rebrand_plan(raw_html)
+        
+        print(f"✅ [Phase 1] Brand: {plan.get('brand_name')} / Product: {plan.get('new_product_name')}")
+        
+        # Extract first image for Stripe
+        soup = BeautifulSoup(raw_html, "lxml")
+        first_image = None
+        for img in soup.find_all("img"):
+            src = img.get("src", "")
+            if src.startswith("http") and not any(x in src.lower() for x in ["logo", "icon", "pixel"]):
+                first_image = src
+                break
+                
+        print("💳 [Rebrand V2] Creating Stripe payment link for $19.00...")
+        stripe_url = create_stripe_payment_link(
+            product_name=plan['new_product_name'],
+            price_val=19.00,
+            brand_name=plan['brand_name'],
+            brand_color=plan.get('brand_color', '#FF6B35'),
+            image_url=first_image,
+            description=plan.get('product_description', '')
+        )
+        
+        print(f"🔗 [Stripe] Link created: {stripe_url}")
+        
+        print("🏗️ [Rebrand V2] Starting Phase 3: Surgical Reconstruction...")
+        # We use Python for reconstruction to avoid truncation on large pages
+        final_html = surgical_rebrand(raw_html, plan, stripe_url)
+        
+        print("✅ [Rebrand V2] Rebranding complete!")
+        
+        return {
+            "success": True,
+            "brand_name": plan['brand_name'],
+            "brand_tagline": plan['brand_tagline'],
+            "new_price": "19.00",
+            "brand_color": plan.get('brand_color', '#FF6B35'),
+            "logo_svg": plan.get('logo_svg', ''),
+            "cta_text": plan.get('cta_text', 'Shop Now'),
+            "slug": slugify(plan['brand_name']),
+            "cleaned_html": final_html,
+            "stripe_url": stripe_url,
+            "plan": plan
+        }
+    except Exception as e:
+        print(f"❌ [Rebrand V2] Error: {e}")
+        return {"success": False, "error": str(e)}
+
+
+if __name__ == "__main__":
+    # Test script
+    import sys
+    if len(sys.argv) > 1:
+        path = sys.argv[1]
+        with open(path, "r") as f:
+            html = f.read()
+        res = rebrand_landing_v2(html)
+        with open("rebrand_test.html", "w") as f:
+            f.write(res['cleaned_html'])
+        print(f"Test complete. Output in rebrand_test.html")

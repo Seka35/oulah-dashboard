@@ -92,7 +92,7 @@ def extract_price(text):
     return None, None, ''
 
 
-def analyze_landing_page(url, timeout=15):
+def analyze_landing_page(url, timeout=60):
     """
     Scrape and analyze a landing page URL.
 

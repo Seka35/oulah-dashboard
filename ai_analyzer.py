@@ -135,7 +135,7 @@ def analyze_product(product_data, platform):
                 ],
                 "response_format": {"type": "json_object"}
             }),
-            timeout=30
+            timeout=90
         )
         
         if response.status_code != 200:
@@ -164,7 +164,7 @@ def analyze_product(product_data, platform):
             return {"error": f"Invalid AI response format: {str(e)}"}
 
     except requests.exceptions.Timeout:
-        return {"error": "AI analysis timed out after 30 seconds"}
+        return {"error": "AI analysis timed out after 90 seconds"}
     except Exception as e:
         print(f"Exception during AI analysis: {e}")
         return {"error": str(e)}

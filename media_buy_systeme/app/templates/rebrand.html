@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block title %}Rebrand — Meta Campaign Manager{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2 class="mb-4">🎨 Rebrand Landing Pages</h2>
+    </div>
+</div>
+
+<!-- VPS Status -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <strong>VPS Connection</strong>
+                {% if vps_connected %}
+                    <span class="badge bg-success">Connected</span>
+                {% else %}
+                    <span class="badge bg-danger">Disconnected</span>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                <p class="mb-2"><strong>Host:</strong> 178.105.100.232</p>
+                <p class="mb-2"><strong>Path:</strong> /opt/launch-engine/landings</p>
+                <p class="mb-1"><strong>Status:</strong> {{ vps_message }}</p>
+                <form action="/rebrand/test-vps" method="post" class="mt-2">
+                    <button type="submit" class="btn btn-sm btn-outline-primary">Test Connection</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <strong>Published Landings</strong>
+            </div>
+            <div class="card-body">
+                {% if published_landings %}
+                    <ul class="list-unstyled">
+                        {% for landing in published_landings %}
+                            <li class="mb-1">
+                                <a href="{{ landing.url }}" target="_blank">{{ landing.url }}</a>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-muted mb-0">No landings published yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Rebrand Form -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <strong>Rebrand a Landing Page</strong>
+            </div>
+            <div class="card-body">
+                <form action="/rebrand/rebrand" method="post" id="rebrandForm">
+                    <div class="mb-3">
+                        <label for="raw_html" class="form-label">Paste the raw HTML of the landing page:</label>
+                        <textarea
+                            class="form-control"
+                            id="raw_html"
+                            name="raw_html"
+                            rows="12"
+                            placeholder="<html>...</textarea>
+                        ></textarea>
+                        <div class="form-text">Paste the full HTML source from the original landing page.</div>
+                    </div>
+
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="publishNow" name="publish" value="1">
+                        <label class="form-check-label" for="publishNow">
+                            Auto-publish to VPS after rebrand
+                        </label>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">
+                        🎨 Rebrand with AI
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- How it works -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card bg-light">
+            <div class="card-header"><strong>How it works</strong></div>
+            <div class="card-body">
+                <ol class="mb-0">
+                    <li>Paste the raw HTML from a scraped Facebook/TikTok landing page</li>
+                    <li>The AI analyzes the content and creates a <strong>new brand identity</strong> (name, logo text, tagline)</li>
+                    <li>The AI sets a <strong>new price</strong> (dropshipping sweet spot: $29-$99)</li>
+                    <li>All references to the original shop are <strong>removed</strong></li>
+                    <li>Other products on the page are <strong>removed</strong> (only main product stays)</li>
+                    <li>Meta Pixel is <strong>injected</strong> automatically</li>
+                    <li>Publish to VPS → <code>https://ignuva.shop/&lt;slug&gt;</code></li>
+                    <li>Use the URL as <code>--link-url</code> in Meta Ads creative</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

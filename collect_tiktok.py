@@ -38,7 +38,7 @@ def get_access_token():
             "client_secret": CLIENT_SECRET,
             "grant_type": "client_credentials"
         },
-        timeout=30
+        timeout=60
     )
     result = resp.json()
 
@@ -75,7 +75,7 @@ def search_ads(access_token, search_term, country="FR", max_count=50):
         "max_count": max_count
     }
 
-    resp = requests.post(url, headers=headers, params={"fields": "ad.id"}, json=body, timeout=30)
+    resp = requests.post(url, headers=headers, params={"fields": "ad.id"}, json=body, timeout=60)
     return resp.json()
 
 
@@ -91,7 +91,7 @@ def get_ad_details(access_token, ad_id):
     }
     body = {"ad_id": ad_id}
 
-    resp = requests.post(url, headers=headers, params=params, json=body, timeout=30)
+    resp = requests.post(url, headers=headers, params=params, json=body, timeout=60)
     return resp.json()
 
 

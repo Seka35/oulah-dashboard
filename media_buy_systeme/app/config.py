@@ -5,7 +5,7 @@ load_dotenv()
 
 
 class Config:
-    DATABASE_URL = os.getenv("DATABASE_URL")
+    DATABASE_URL = os.getenv("LAUNCH_ENGINE_DATABASE_URL") or os.getenv("DATABASE_URL")
     META_AD_ACCOUNT_ID = os.getenv("META_AD_ACCOUNT_ID", "1034387189758630")
     META_ACCESS_TOKEN = os.getenv("META_ACCESS_TOKEN", "")
     META_PIXEL_ID = os.getenv("META_PIXEL_ID", "")

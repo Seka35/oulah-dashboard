@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+
+{% block title %}Product Detail: {{ product.sales_title or product.name }}{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="{{ url_for('dashboard.index') }}" class="btn btn-link p-0 text-decoration-none">← Back to Dashboard</a>
+</div>
+
+<div class="row">
+    <!-- Left Column: Product Info -->
+    <div class="col-md-8">
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <h2 class="h4 mb-3">{{ product.sales_title or product.name }}</h2>
+                    <span class="badge rounded-pill bg-{{ 'primary' if product.status == 'testing' else 'warning' if product.status == 'approved' else 'secondary' }}">
+                        {{ product.status|upper }}
+                    </span>
+                </div>
+                
+                <div class="row mt-3">
+                    <div class="col-md-6">
+                        <p class="mb-1 text-muted small">Targeting Niche</p>
+                        <p class="fw-bold">{{ product.niche or 'N/A' }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-1 text-muted small">Landing Page</p>
+                        <a href="{{ product.lp_url }}" target="_blank" class="text-truncate d-block">{{ product.lp_url }}</a>
+                    </div>
+                </div>
+
+                {% if product.meta_campaign_id %}
+                <hr>
+                <div class="bg-light p-3 rounded">
+                    <h6 class="mb-3">Meta IDs</h6>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <small class="text-muted">Campaign ID</small>
+                            <div class="font-monospace small">{{ product.meta_campaign_id }}</div>
+                        </div>
+                        <div class="col-md-4">
+                            <small class="text-muted">AdSet ID</small>
+                            <div class="font-monospace small">{{ product.meta_adset_id }}</div>
+                        </div>
+                        <div class="col-md-4">
+                            <small class="text-muted">Ad Account</small>
+                            <div class="small">{{ product.meta_ad_account_name }}</div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">🖼️ Creatives</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for creative in creatives %}
+                    <div class="col-md-4 mb-3">
+                        <div class="border rounded overflow-hidden">
+                            {% if creative.type == 'image' %}
+                            <img src="{{ creative.url }}" class="img-fluid" style="height: 150px; width: 100%; object-fit: cover;">
+                            {% else %}
+                            <div class="bg-dark text-white d-flex align-items-center justify-content-center" style="height: 150px;">
+                                🎬 Video
+                            </div>
+                            {% endif %}
+                            <div class="p-2 small">
+                                <div class="text-muted">{{ creative.format }} • {{ creative.status }}</div>
+                                <div class="text-truncate">{{ creative.url }}</div>
+                                {% if creative.meta_ad_id %}
+                                <div class="mt-1 badge bg-info font-monospace" style="font-size: 10px;">Ad: {{ creative.meta_ad_id }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="col-12 text-center py-4 text-muted">No creatives found</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">📜 Event Log</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0">
+                        <thead>
+                            <tr>
+                                <th class="ps-3">Time</th>
+                                <th>Event</th>
+                                <th>Details</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for event in events %}
+                            <tr>
+                                <td class="ps-3 text-muted small">{{ event.created_at }}</td>
+                                <td><span class="badge bg-light text-dark">{{ event.event_type }}</span></td>
+                                <td class="small font-monospace">{{ event.payload }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column: Stats -->
+    <div class="col-md-4">
+        <div class="card shadow-sm mb-4 bg-primary text-white">
+            <div class="card-body">
+                <h5 class="card-title">Performance Metrics</h5>
+                <div class="row mt-4">
+                    <div class="col-6 mb-3">
+                        <div class="text-white-50 small">Spend</div>
+                        <div class="h4">{{ product.meta_amount_spent }}€</div>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <div class="text-white-50 small">ROAS</div>
+                        <div class="h4">{{ product.meta_roas }}x</div>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <div class="text-white-50 small">Purchases</div>
+                        <div class="h4">{{ product.meta_purchases }}</div>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <div class="text-white-50 small">Conv. Value</div>
+                        <div class="h4">{{ product.meta_conversion_value }}€</div>
+                    </div>
+                </div>
+                <hr class="bg-white-50">
+                <div class="row">
+                    <div class="col-4">
+                        <div class="text-white-50 x-small">CPM</div>
+                        <div class="fw-bold small">{{ product.meta_cpm }}</div>
+                    </div>
+                    <div class="col-4">
+                        <div class="text-white-50 x-small">CTR</div>
+                        <div class="fw-bold small">{{ product.meta_ctr }}%</div>
+                    </div>
+                    <div class="col-4">
+                        <div class="text-white-50 x-small">CPC</div>
+                        <div class="fw-bold small">{{ product.meta_cpc }}€</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">Funnel Data</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="small">Initiate Checkout</span>
+                        <span class="fw-bold">{{ product.meta_ic }}</span>
+                    </div>
+                    <div class="progress" style="height: 6px;">
+                        <div class="progress-bar" style="width: 100%"></div>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="small">Add to Cart</span>
+                        <span class="fw-bold">{{ product.meta_atc }}</span>
+                    </div>
+                    <div class="progress" style="height: 6px;">
+                        <div class="progress-bar bg-info" style="width: 70%"></div>
+                    </div>
+                </div>
+                <div>
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="small">Purchases</span>
+                        <span class="fw-bold">{{ product.meta_purchases }}</span>
+                    </div>
+                    <div class="progress" style="height: 6px;">
+                        <div class="progress-bar bg-success" style="width: 30%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .x-small { font-size: 0.75rem; }
+</style>
+{% endblock %}

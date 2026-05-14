@@ -2,4 +2,9 @@ flask
 psycopg2-binary
 boto3
 python-dotenv
-gunicornpyyaml
+requests
+gunicorn
+PyYAML
+openai>=1.0.0
+beautifulsoup4
+lxml

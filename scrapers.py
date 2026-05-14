@@ -48,7 +48,7 @@ def start_apify_actor(actor_id, input_data):
     resp = requests.post(
         f"https://api.apify.com/v2/acts/{actor_id}/runs?token={APIFY_KEY}",
         json=input_data,
-        timeout=30
+        timeout=60
     )
 
     if resp.status_code not in [200, 201]:
@@ -60,12 +60,12 @@ def start_apify_actor(actor_id, input_data):
     if not run_id:
         return {"error": f"No run ID returned: {result}"}
 
-    # Poll for completion
-    for i in range(24):  # max 120 seconds
+    # Poll for completion (max 10 minutes)
+    for i in range(120):  # 120 * 5 = 600 seconds
         time.sleep(5)
         status_resp = requests.get(
             f"https://api.apify.com/v2/acts/{actor_id}/runs/{run_id}?token={APIFY_KEY}",
-            timeout=30
+            timeout=60
         )
         status_data = status_resp.json()
         status = status_data.get("data", {}).get("status", "")
@@ -78,7 +78,7 @@ def start_apify_actor(actor_id, input_data):
     # Get dataset
     run_resp = requests.get(
         f"https://api.apify.com/v2/acts/{actor_id}/runs/{run_id}?token={APIFY_KEY}",
-        timeout=30
+        timeout=60
     )
     run_info = run_resp.json()
     dataset_id = run_info.get("data", {}).get("defaultDatasetId")
@@ -169,6 +169,15 @@ def search_facebook(search_term, country="ALL", max_ads=20):
         for img in snapshot.get("images", []): 
             if img and img not in image_urls: image_urls.append(img)
         
+        # Extract link_url (landing page)
+        link_url = item.get("link_url")
+        if not link_url:
+            link_url = snapshot.get("link_url")
+        if not link_url and cards:
+            link_url = cards[0].get("link_url")
+        if not link_url:
+            link_url = snapshot.get("cta_link")
+
         ad_id = item.get("ad_archive_id") or item.get("adArchiveId", "")
         ad_entry = {
             "id": ad_id, "platform": "facebook", "image_urls": image_urls, "videos": videos,
@@ -179,6 +188,7 @@ def search_facebook(search_term, country="ALL", max_ads=20):
             "reach": item.get("impressions_with_index", {}).get("impressionsText", "N/A"),
             "advertiser_name": item.get("page_name", "Unknown"),
             "body_text": cards[0].get("body", "") if cards else snapshot.get("body", ""),
+            "link_url": link_url,
             "_raw": item
         }
         ads.append(ad_entry)
@@ -222,6 +232,11 @@ def search_facebook_by_advertiser(page_ids, max_results_per_query=200):
         media = item.get("media", {}) or {}
         primary_thumbnail = media.get("primary_thumbnail", "")
 
+        # Extract link_url
+        link_url = item.get("link_url") or item.get("ad_url")
+        if not link_url:
+            link_url = item.get("snapshot", {}).get("link_url")
+
         # Build the ad entry (similar structure to other search functions)
         ad_entry = {
             "id": item.get("id", "") or item.get("ad_archive_id", ""),
@@ -239,6 +254,7 @@ def search_facebook_by_advertiser(page_ids, max_results_per_query=200):
             "end_date": item.get("end_date", ""),
             "ad_category": item.get("ad_category", "UNKNOWN"),
             "scraped_at": item.get("scraped_at", ""),
+            "link_url": link_url,
             "_raw": item
         }
 

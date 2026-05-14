@@ -42,3 +42,11 @@ access
 *.pem
 *.key
 *.token.json
+
+# Local assets and temporary data
+static/landing_pages/
+static/test_manual/
+static/test_manual_2/
+scratch/
+*.bak
+rebrand_test.html

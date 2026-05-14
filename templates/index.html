@@ -362,19 +362,22 @@
                         {% endfor %}
                     </select>
                 </div>
-                <div class="form-group">
-                    <label>Include Etsy</label>
-                    <select id="include_etsy" class="form-control">
-                        <option value="true">Yes</option>
-                        <option value="false">No</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Include Amazon</label>
-                    <select id="include_amazon" class="form-control">
-                        <option value="true">Yes</option>
-                        <option value="false">No</option>
-                    </select>
+                <div class="form-group" style="grid-column: span 2;">
+                    <label>Platforms to Search</label>
+                    <div style="display: flex; gap: 16px; margin-top: 8px; flex-wrap: wrap;">
+                        <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                            <input type="checkbox" id="include_tiktok" checked style="width:18px; height:18px; accent-color:var(--accent-primary);"> 🎵 TikTok
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                            <input type="checkbox" id="include_facebook" checked style="width:18px; height:18px; accent-color:var(--accent-primary);"> 📘 Facebook
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                            <input type="checkbox" id="include_etsy_cb" checked style="width:18px; height:18px; accent-color:var(--accent-primary);"> 🛒 Etsy
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                            <input type="checkbox" id="include_amazon_cb" checked style="width:18px; height:18px; accent-color:var(--accent-primary);"> 📦 Amazon
+                        </label>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label>Limit per Platform</label>
@@ -1181,13 +1184,24 @@
                 console.log('DEBUG: raw.snapshot?.cards:', raw.snapshot?.cards ? raw.snapshot.cards.length : 0);
 
                 // Try multiple paths for link_url
-                let linkUrl = null;
-                if (raw.cards && raw.cards[0]?.link_url) {
-                    linkUrl = raw.cards[0].link_url;
-                } else if (raw.snapshot?.cards?.[0]?.link_url) {
-                    linkUrl = raw.snapshot.cards[0].link_url;
-                } else if (raw.link_url) {
-                    linkUrl = raw.link_url;
+                let linkUrl = ad.link_url || null;
+                
+                if (!linkUrl) {
+                    if (raw.cards && raw.cards[0]?.link_url) {
+                        linkUrl = raw.cards[0].link_url;
+                    } else if (raw.snapshot?.cards?.[0]?.link_url) {
+                        linkUrl = raw.snapshot.cards[0].link_url;
+                    } else if (raw.snapshot?.link_url) {
+                        linkUrl = raw.snapshot.link_url;
+                    } else if (raw.link_url) {
+                        linkUrl = raw.link_url;
+                    } else if (raw.snapshot?.cta_link) {
+                        linkUrl = raw.snapshot.cta_link;
+                    } else if (raw.snapshot?.body?.text && raw.snapshot.body.text.includes('http')) {
+                        // Fallback: try to find URL in body text if it's there
+                        const urls = raw.snapshot.body.text.match(/https?:\/\/[^\s]+/);
+                        if (urls) linkUrl = urls[0];
+                    }
                 }
 
                 if (!linkUrl) {
@@ -1471,7 +1485,7 @@
 
             try {
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 300000); // 5min timeout
+                const timeoutId = setTimeout(() => controller.abort(), 600000); // 10min timeout
 
                 const response = await fetch('/api/search', {
                     method: 'POST',
@@ -1482,8 +1496,10 @@
                         facebook_country: document.getElementById('facebook_country').value,
                         max_ads: document.getElementById('max_ads').value,
                         media_filter: currentMediaFilter,
-                        include_etsy: document.getElementById('include_etsy').value === 'true',
-                        include_amazon: document.getElementById('include_amazon').value === 'true',
+                        include_tiktok: document.getElementById('include_tiktok').checked,
+                        include_facebook: document.getElementById('include_facebook').checked,
+                        include_etsy: document.getElementById('include_etsy_cb').checked,
+                        include_amazon: document.getElementById('include_amazon_cb').checked,
                         auto_analyze: document.getElementById('auto_analyze').checked
                     }),
                     signal: controller.signal

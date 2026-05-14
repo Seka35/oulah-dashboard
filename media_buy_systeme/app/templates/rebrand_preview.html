@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block title %}Preview — {{ brand_name }}{% endblock %}
+
+{% block content %}
+<div class="row mb-3">
+    <div class="col-12">
+        <h2>
+            <span style="background:{{ brand_color }};color:white;padding:4px 12px;border-radius:4px">
+                {{ brand_name }}
+            </span>
+            <small class="text-muted">{{ brand_tagline }}</small>
+        </h2>
+    </div>
+</div>
+
+<!-- Info Bar -->
+<div class="row mb-3">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body py-2">
+                <strong>Price</strong><br>
+                <span class="h4 text-success">${{ new_price }}</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body py-2">
+                <strong>Slug</strong><br>
+                <code>{{ slug }}</code>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body py-2">
+                <strong>CTA</strong><br>
+                {{ cta_text }}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body py-2">
+                <strong>URL</strong><br>
+                {% if landing_url %}
+                    <a href="{{ landing_url }}" target="_blank">{{ landing_url }}</a>
+                {% else %}
+                    <span class="text-muted">Not published</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Actions -->
+<div class="row mb-3">
+    <div class="col-12">
+        {% if not landing_url %}
+            <form action="/rebrand/publish" method="post" class="d-inline">
+                <button type="submit" class="btn btn-success">
+                    🚀 Publish to VPS
+                </button>
+            </form>
+        {% else %}
+            <a href="{{ landing_url }}" target="_blank" class="btn btn-outline-primary">
+                🔗 Open on ignuva.shop
+            </a>
+        {% endif %}
+        <a href="/rebrand" class="btn btn-outline-secondary">← Back to Rebrand</a>
+    </div>
+</div>
+
+<!-- HTML Preview -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <strong>Live Preview</strong>
+                <span class="badge bg-secondary">HTML Rendered</span>
+            </div>
+            <div class="card-body p-0" style="max-height: 600px; overflow-y: auto;">
+                <iframe src="data:text/html;charset=utf-8,{{ preview_html | urlencode }}"
+                        style="width:100%;height:600px;border:none"
+                        title="Landing Preview"></iframe>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Raw HTML (collapsible) -->
+<div class="row mt-3">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <strong>Raw HTML</strong>
+            </div>
+            <div class="card-body">
+                <textarea class="form-control font-monospace" rows="10" readonly>{{ cleaned_html }}</textarea>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

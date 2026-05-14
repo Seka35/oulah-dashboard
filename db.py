@@ -1,16 +1,68 @@
 import os
 import json
 import psycopg2
-from psycopg2.extras import DictCursor
-from psycopg2.extras import Json
+from psycopg2 import pool
+from psycopg2.extras import DictCursor, Json
 from datetime import datetime
 from dotenv import load_dotenv
 
 load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://anon-404@localhost/analyse_ad")
 
+# Initialize connection pool (min 1, max 50 connections)
+# Using ThreadedConnectionPool because Flask is multi-threaded
+try:
+    db_pool = pool.ThreadedConnectionPool(1, 50, DATABASE_URL)
+    print("✅ Database connection pool (Threaded) initialized.")
+except Exception as e:
+    print(f"❌ Failed to initialize database pool: {e}")
+    db_pool = None
+
 def get_connection():
+    if db_pool:
+        return db_pool.getconn()
     return psycopg2.connect(DATABASE_URL)
+
+def release_connection(conn):
+    if not conn:
+        return
+    if db_pool:
+        try:
+            db_pool.putconn(conn)
+        except:
+            release_connection(conn)
+    else:
+        release_connection(conn)
+
+from contextlib import contextmanager
+
+@contextmanager
+def db_cursor():
+    """Context manager for database connections and cursors"""
+    conn = get_connection()
+    cursor = conn.cursor(cursor_factory=DictCursor)
+    try:
+        yield cursor
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        raise e
+    finally:
+        cursor.close()
+        release_connection(conn)
+
+@contextmanager
+def db_conn():
+    """Context manager for database connections"""
+    conn = get_connection()
+    try:
+        yield conn
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        raise e
+    finally:
+        release_connection(conn)
 
 def stringify(val):
     if val is None:
@@ -67,7 +119,7 @@ def get_setting(key, default=None):
         return default
     finally:
         cursor.close()
-        conn.close()
+        release_connection(conn)
 
 def set_setting(key, value):
     """Update or insert a setting in the settings table"""
@@ -89,7 +141,7 @@ def set_setting(key, value):
         return False
     finally:
         cursor.close()
-        conn.close()
+        release_connection(conn)
 
 
 
@@ -173,7 +225,7 @@ def save_etsy_products(products, search_keyword):
         print(f"Error saving Etsy products: {e}")
     finally:
         cursor.close()
-        conn.close()
+        release_connection(conn)
     return saved
 
 
@@ -191,7 +243,7 @@ def get_top_etsy_products(min_rating=4.5, min_reviews=100, limit=50):
         return [dict(r) for r in cursor.fetchall()]
     finally:
         cursor.close()
-        conn.close()
+        release_connection(conn)
 
 
 def get_etsy_products_by_shop(shop_name, limit=20):
@@ -208,7 +260,7 @@ def get_etsy_products_by_shop(shop_name, limit=20):
         return [dict(r) for r in cursor.fetchall()]
     finally:
         cursor.close()
-        conn.close()
+        release_connection(conn)
 
 
 def get_etsy_products_by_keyword(keyword, limit=50):
@@ -225,7 +277,7 @@ def get_etsy_products_by_keyword(keyword, limit=50):
         return [dict(r) for r in cursor.fetchall()]
     finally:
         cursor.close()
-        conn.close()
+        release_connection(conn)
 
 
 def get_amazon_products_by_keyword(keyword, limit=50):
@@ -242,7 +294,7 @@ def get_amazon_products_by_keyword(keyword, limit=50):
         return [dict(r) for r in cursor.fetchall()]
     finally:
         cursor.close()
-        conn.close()
+        release_connection(conn)
 
 
 def save_amazon_products(products, search_keyword):
@@ -335,7 +387,7 @@ def save_amazon_products(products, search_keyword):
         print(f"Error saving Amazon products: {e}")
     finally:
         cursor.close()
-        conn.close()
+        release_connection(conn)
     return saved
 
 
@@ -353,7 +405,7 @@ def get_top_amazon_products(min_stars=4.0, min_reviews=50, limit=50):
         return [dict(r) for r in cursor.fetchall()]
     finally:
         cursor.close()
-        conn.close()
+        release_connection(conn)
 
 
 def save_search(search_term, tiktok_country, facebook_country, google_region, max_ads, all_ads):
@@ -381,8 +433,18 @@ def save_search(search_term, tiktok_country, facebook_country, google_region, ma
             raw = ad.get("_raw", {})
             if platform == "facebook":
                 _save_facebook_ad(cursor, search_id, ad, raw, search_term)
+                # Fetch existing ai_analysis if any
+                cursor.execute("SELECT ai_analysis FROM ads WHERE ad_archive_id = %s", (str(raw.get("ad_archive_id") or ad.get("id")),))
+                row = cursor.fetchone()
+                if row and row[0]:
+                    ad["ai_analysis"] = row[0]
             elif platform == "tiktok":
                 _save_tiktok_ad(cursor, search_id, ad, raw, search_term)
+                # Fetch existing ai_analysis
+                cursor.execute("SELECT ai_analysis FROM tiktok_ads WHERE ad_id = %s", (str(raw.get("AD ID") or ad.get("id")),))
+                row = cursor.fetchone()
+                if row and row[0]:
+                    ad["ai_analysis"] = row[0]
             elif platform == "google":
                 _save_google_ad(cursor, search_id, ad, raw)
 
@@ -396,7 +458,7 @@ def save_search(search_term, tiktok_country, facebook_country, google_region, ma
         return None
     finally:
         cursor.close()
-        conn.close()
+        release_connection(conn)
 
 def _save_facebook_ad(cursor, search_id, ad, raw, search_keyword=""):
     archive_id = str(raw.get("ad_archive_id") or ad.get("id", ""))
@@ -727,7 +789,7 @@ def save_fb_advertiser_ads(ads_by_page):
         print(f"Error saving fb_advertiser_ads: {e}")
     finally:
         cursor.close()
-        conn.close()
+        release_connection(conn)
     return saved
 
 
@@ -852,7 +914,7 @@ def get_search_history(limit=20):
     cursor.execute("SELECT * FROM searches ORDER BY id DESC LIMIT %s", (limit,))
     rows = cursor.fetchall()
     cursor.close()
-    conn.close()
+    release_connection(conn)
     return [dict(r) for r in rows]
 
 
@@ -873,7 +935,7 @@ def get_fb_advertiser_ads(page_id, limit=200):
         return [dict(r) for r in cursor.fetchall()]
     finally:
         cursor.close()
-        conn.close()
+        release_connection(conn)
 
 
 def get_all_fb_advertiser_counts():
@@ -892,7 +954,7 @@ def get_all_fb_advertiser_counts():
         return {str(row['page_id']): row['ad_count'] for row in cursor.fetchall()}
     finally:
         cursor.close()
-        conn.close()
+        release_connection(conn)
 
 
 def get_search_results(search_id):
@@ -1150,7 +1212,7 @@ def get_all_raw_data(limit=5000):
         }
     finally:
         cursor.close()
-        conn.close()
+        release_connection(conn)
 
 
 def save_classification(ad_archive_id, tiktok_ad_id, classification):
@@ -1192,7 +1254,7 @@ def save_classification(ad_archive_id, tiktok_ad_id, classification):
         return False
     finally:
         cursor.close()
-        conn.close()
+        release_connection(conn)
 
 
 def update_advertiser_tracking(page_id, page_name, platform, ad_count, first_seen, last_seen):
@@ -1261,7 +1323,7 @@ def update_advertiser_tracking(page_id, page_name, platform, ad_count, first_see
         return None, 0, 'low'
     finally:
         cursor.close()
-        conn.close()
+        release_connection(conn)
 
 
 def get_scaling_advertisers(min_score=14, limit=50):
@@ -1278,7 +1340,7 @@ def get_scaling_advertisers(min_score=14, limit=50):
         return [dict(r) for r in cursor.fetchall()]
     finally:
         cursor.close()
-        conn.close()
+        release_connection(conn)
 
 
 def get_digital_opportunities(min_confidence=0.25, limit=100):
@@ -1300,7 +1362,7 @@ def get_digital_opportunities(min_confidence=0.25, limit=100):
         return [dict(r) for r in cursor.fetchall()]
     finally:
         cursor.close()
-        conn.close()
+        release_connection(conn)
 
 
 def save_product_opportunity(opp_data):
@@ -1359,7 +1421,7 @@ def save_product_opportunity(opp_data):
         return None
     finally:
         cursor.close()
-        conn.close()
+        release_connection(conn)
 
 
 def save_landing_page_analysis(opportunity_id, analysis_result):
@@ -1414,7 +1476,7 @@ def save_landing_page_analysis(opportunity_id, analysis_result):
         return False
     finally:
         cursor.close()
-        conn.close()
+        release_connection(conn)
 
 
 def get_opportunities(status=None, tier=None, limit=100):
@@ -1436,7 +1498,7 @@ def get_opportunities(status=None, tier=None, limit=100):
         return [dict(r) for r in cursor.fetchall()]
     finally:
         cursor.close()
-        conn.close()
+        release_connection(conn)
 
 
 def get_opportunities_needing_landing_pages(limit=20):
@@ -1458,7 +1520,7 @@ def get_opportunities_needing_landing_pages(limit=20):
         return [dict(r) for r in cursor.fetchall()]
     finally:
         cursor.close()
-        conn.close()
+        release_connection(conn)
 
 
 # ================================================
@@ -1489,7 +1551,7 @@ def get_criteria(platform=None, category=None, rule_type=None, is_active=True):
         return [dict(r) for r in cursor.fetchall()]
     finally:
         cursor.close()
-        conn.close()
+        release_connection(conn)
 
 
 def get_criteria_weights():
@@ -1505,7 +1567,7 @@ def get_criteria_weights():
         return {r['config_key']: float(r['config_value']) for r in cursor.fetchall()}
     finally:
         cursor.close()
-        conn.close()
+        release_connection(conn)
 
 
 def get_criteria_keywords():
@@ -1522,7 +1584,7 @@ def get_criteria_keywords():
         return [dict(r) for r in cursor.fetchall()]
     finally:
         cursor.close()
-        conn.close()
+        release_connection(conn)
 
 
 def get_criteria_price_signals():
@@ -1538,7 +1600,7 @@ def get_criteria_price_signals():
         return [dict(r) for r in cursor.fetchall()]
     finally:
         cursor.close()
-        conn.close()
+        release_connection(conn)
 
 
 def get_criteria_domains():
@@ -1554,7 +1616,7 @@ def get_criteria_domains():
         return [dict(r) for r in cursor.fetchall()]
     finally:
         cursor.close()
-        conn.close()
+        release_connection(conn)
 
 
 def save_criterion(rule_id, rule_type, platform, category, keyword,
@@ -1595,7 +1657,7 @@ def save_criterion(rule_id, rule_type, platform, category, keyword,
         return None
     finally:
         cursor.close()
-        conn.close()
+        release_connection(conn)
 
 
 def delete_criterion(rule_id):
@@ -1615,7 +1677,7 @@ def delete_criterion(rule_id):
         return False
     finally:
         cursor.close()
-        conn.close()
+        release_connection(conn)
 
 
 def get_criterion_stats():
@@ -1634,14 +1696,17 @@ def get_criterion_stats():
         return [dict(r) for r in cursor.fetchall()]
     finally:
         cursor.close()
-        conn.close()
+        release_connection(conn)
 
 
-def save_ai_analysis(platform, external_id, analysis_result):
+def save_ai_analysis(platform, external_id, analysis_result, conn=None):
     """
     Save AI analysis result to the corresponding table
     """
-    conn = get_connection()
+    should_close = False
+    if conn is None:
+        conn = get_connection()
+        should_close = True
     cursor = conn.cursor()
     try:
         table_map = {
@@ -1679,12 +1744,61 @@ def save_ai_analysis(platform, external_id, analysis_result):
         conn.commit()
         return True
     except Exception as e:
-        conn.rollback()
+        if conn: conn.rollback()
         print(f"Error saving AI analysis: {e}")
         return False
     finally:
+        if cursor: cursor.close()
+        if should_close and conn:
+            release_connection(conn)
+
+def get_bulk_product_metadata(platform, external_ids):
+    """
+    Retrieve AI analysis and timestamps for multiple products/ads in one query
+    """
+    if not external_ids:
+        return {}
+
+    conn = get_connection()
+    cursor = conn.cursor(cursor_factory=DictCursor)
+    try:
+        table_map = {
+            'facebook': 'ads', 'fb': 'ads',
+            'tiktok': 'tiktok_ads',
+            'amazon': 'amazon_products',
+            'etsy': 'etsy_products'
+        }
+        id_col_map = {
+            'facebook': 'ad_archive_id', 'fb': 'ad_archive_id',
+            'tiktok': 'ad_id',
+            'amazon': 'asin',
+            'etsy': 'listing_id'
+        }
+        
+        table = table_map.get(platform)
+        id_col = id_col_map.get(platform)
+        
+        if not table or not id_col:
+            return {}
+
+        created_col = 'created_at' if platform in ['facebook', 'fb', 'tiktok'] else 'first_seen_at'
+        
+        # Use ANY(array) for bulk fetch
+        cursor.execute(f"SELECT {id_col} as id, ai_analysis, last_updated_at, {created_col} as created_at FROM {table} WHERE {id_col} = ANY(%s)", (list(map(str, external_ids)),))
+        rows = cursor.fetchall()
+        
+        result = {}
+        for row in rows:
+            result[row['id']] = {
+                "ai_analysis": row['ai_analysis'],
+                "last_updated_at": row['last_updated_at'].isoformat() if row['last_updated_at'] else None,
+                "created_at": row['created_at'].isoformat() if row['created_at'] else None
+            }
+        return result
+    finally:
         cursor.close()
-        conn.close()
+        release_connection(conn)
+
 
 def get_product_metadata(platform, external_id):
     """
@@ -1726,7 +1840,7 @@ def get_product_metadata(platform, external_id):
         return None
     finally:
         cursor.close()
-        conn.close()
+        release_connection(conn)
 
 # ============ AUTOMATION FUNCTIONS ============
 
@@ -1740,7 +1854,7 @@ def get_automation_settings():
         return dict(row) if row else None
     finally:
         cursor.close()
-        conn.close()
+        release_connection(conn)
 
 def update_automation_settings(settings):
     """Update global automation settings"""
@@ -1779,7 +1893,7 @@ def update_automation_settings(settings):
         return False
     finally:
         cursor.close()
-        conn.close()
+        release_connection(conn)
 
 def get_automation_keywords():
     """Get all automation keywords with their platform status"""
@@ -1802,7 +1916,7 @@ def get_automation_keywords():
         return [dict(r) for r in cursor.fetchall()]
     finally:
         cursor.close()
-        conn.close()
+        release_connection(conn)
 
 def add_automation_keyword(category, keyword):
     """Add a new keyword to automation list"""
@@ -1822,7 +1936,7 @@ def add_automation_keyword(category, keyword):
         return False
     finally:
         cursor.close()
-        conn.close()
+        release_connection(conn)
 
 def delete_automation_keyword(keyword_id):
     """Delete a keyword from automation list"""
@@ -1838,7 +1952,7 @@ def delete_automation_keyword(keyword_id):
         return False
     finally:
         cursor.close()
-        conn.close()
+        release_connection(conn)
 
 def update_keyword_status(keyword_id, platform, status):
     """Update the status of a keyword for a specific platform"""
@@ -1865,7 +1979,7 @@ def update_keyword_status(keyword_id, platform, status):
         return False
     finally:
         cursor.close()
-        conn.close()
+        release_connection(conn)
 
 def get_next_keyword_for_platform(platform):
     """Get the next keyword to scrape for a platform, cycling through categories"""
@@ -1885,7 +1999,7 @@ def get_next_keyword_for_platform(platform):
         return dict(row) if row else None
     finally:
         cursor.close()
-        conn.close()
+        release_connection(conn)
 
 # ================================================
 # PRODUCTS TABLE (Scraping pipeline)
@@ -1988,7 +2102,7 @@ def save_product_from_scraping(ai_result, platform, source_ad_id, source_tag="")
         return None
     finally:
         cursor.close()
-        conn.close()
+        release_connection(conn)
 
 def get_products(status=None, platform=None, limit=100):
     """Get products for dashboard"""
@@ -2009,7 +2123,7 @@ def get_products(status=None, platform=None, limit=100):
         return [dict(r) for r in cursor.fetchall()]
     finally:
         cursor.close()
-        conn.close()
+        release_connection(conn)
 
 def update_product_status(source_platform, source_ad_id, status):
     """Update product status"""
@@ -2024,7 +2138,7 @@ def update_product_status(source_platform, source_ad_id, status):
         return cursor.rowcount > 0
     finally:
         cursor.close()
-        conn.close()
+        release_connection(conn)
 
 def add_product_tag(source_platform, source_ad_id, tag):
     """Add a tag to a product"""
@@ -2048,7 +2162,7 @@ def add_product_tag(source_platform, source_ad_id, tag):
         return False
     finally:
         cursor.close()
-        conn.close()
+        release_connection(conn)
 
 def get_product_tags(source_platform, source_ad_id):
     """Get all tags for a product"""
@@ -2065,7 +2179,7 @@ def get_product_tags(source_platform, source_ad_id):
         return [r['tag'] for r in cursor.fetchall()]
     finally:
         cursor.close()
-        conn.close()
+        release_connection(conn)
 
 def save_product_after_analysis(platform, source_ad_id, ai_result, source_tag=""):
     """
@@ -2100,4 +2214,4 @@ def save_system_prompt_history(previous_value, new_value):
         return False
     finally:
         cursor.close()
-        conn.close()
+        release_connection(conn)

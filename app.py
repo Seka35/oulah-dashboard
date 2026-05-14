@@ -238,6 +238,8 @@ def api_search():
     facebook_country = data.get("facebook_country", "ALL")
     max_ads = min(int(data.get("max_ads", 20)), 50)
     media_filter = data.get("media_filter", "all")
+    include_tiktok = data.get("include_tiktok", True)
+    include_facebook = data.get("include_facebook", True)
     include_etsy = data.get("include_etsy", True)
     include_amazon = data.get("include_amazon", True)
 
@@ -251,7 +253,6 @@ def api_search():
     all_ads = []
     etsy_products = []
     amazon_products = []
-    max_ads = int(data.get("max_ads", 10))
     # Facebook Apify actor requires at least 10 results
     fb_max_ads = max(10, max_ads)
 
@@ -260,9 +261,11 @@ def api_search():
         futures = {}
 
         # TikTok
-        futures[executor.submit(search_tiktok, search_term, tiktok_country, max_ads)] = ('tiktok', 'ads')
+        if include_tiktok:
+            futures[executor.submit(search_tiktok, search_term, tiktok_country, max_ads)] = ('tiktok', 'ads')
         # Facebook
-        futures[executor.submit(search_facebook, search_term, facebook_country, fb_max_ads)] = ('facebook', 'ads')
+        if include_facebook:
+            futures[executor.submit(search_facebook, search_term, facebook_country, fb_max_ads)] = ('facebook', 'ads')
         # Etsy
         if include_etsy:
             futures[executor.submit(search_etsy, search_term, max_ads)] = ('etsy', 'products')
@@ -299,131 +302,123 @@ def api_search():
     elif media_filter == "videos_only":
         all_ads = [a for a in all_ads if a["has_videos"] and not a["has_images"]]
 
-    # Enrich Facebook ads with advertiser ad counts (automatic for each search)
-    # Run in background - don't block the response
-    def enrich_fb_advertisers_in_background(fb_ads_list):
-        """Background task to enrich advertiser ad counts"""
-        page_ids = set()
-        for ad in fb_ads_list:
-            raw = ad.get("raw", {}) or ad.get("_raw", {})
-            page_id = raw.get("page_id") or raw.get("snapshot", {}).get("page_id")
-            if page_id:
-                page_ids.add(str(page_id))
-
-        if not page_ids:
-            print("📊 [Background] No page_ids found in ads")
-            return
-
-        print(f"📊 [Background] Enriching {len(page_ids)} Facebook advertisers with their full ad lists...")
-        ads_by_page = {}
-
-        for page_id in page_ids:
-            try:
-                result, err = search_facebook_by_advertiser([page_id], 200)
-                if err:
-                    print(f"⚠️ Advertiser {page_id}: {err}")
-                elif result and page_id in result:
-                    ads_by_page[page_id] = result[page_id]
-            except Exception as e:
-                print(f"⚠️ Error for {page_id}: {e}")
-
-        if ads_by_page:
-            from db import save_fb_advertiser_ads
-            saved = save_fb_advertiser_ads(ads_by_page)
-            print(f"✅ [Background] Saved {saved} advertiser ads to DB for enrichment")
-
-    # Launch background enrichment (non-blocking)
-    if all_ads:
-        fb_ads = [a for a in all_ads if a.get("platform") == "facebook"]
-        if fb_ads:
-            threading.Thread(target=enrich_fb_advertisers_in_background, args=(fb_ads,), daemon=True).start()
-            print(f"📊 Launched background enrichment for {len(set(a.get('_raw',{}).get('page_id') for a in fb_ads if a.get('_raw',{}).get('page_id')))} advertisers")
-
-    # Enrich results with metadata from DB (timestamps, AI, keywords)
-    from db import get_product_metadata
-    for ad in all_ads:
-        meta = get_product_metadata(ad['platform'], ad['id'])
-        if meta:
-            ad['ai_analysis'] = meta.get('ai_analysis')
-            ad['last_updated_at'] = meta.get('last_updated_at')
-            ad['created_at'] = meta.get('created_at')
-            ad['search_keywords'] = meta.get('search_keywords', [])
+    # Enrich results with metadata from DB (timestamps, AI, keywords) in bulk
+    from db import get_bulk_product_metadata
+    platforms_to_enrich = [
+        ('facebook', [a['id'] for a in all_ads if a['platform'] == 'facebook']),
+        ('tiktok', [a['id'] for a in all_ads if a['platform'] == 'tiktok']),
+        ('amazon', [p.get('id') or p.get('asin') for p in amazon_products]),
+        ('etsy', [p.get('id') or p.get('listing_id') for p in etsy_products])
+    ]
     
-    for p in etsy_products:
-        meta = get_product_metadata('etsy', p.get('id'))
-        if meta:
-            p['ai_analysis'] = meta.get('ai_analysis')
-            p['last_updated_at'] = meta.get('last_updated_at')
-            p['created_at'] = meta.get('created_at')
-            p['search_keywords'] = meta.get('search_keywords', [])
-
-    for p in amazon_products:
-        meta = get_product_metadata('amazon', p.get('id'))
-        if meta:
-            p['ai_analysis'] = meta.get('ai_analysis')
-            p['last_updated_at'] = meta.get('last_updated_at')
-            p['created_at'] = meta.get('created_at')
-            p['search_keywords'] = meta.get('search_keywords', [])
-
-    # Sort results by last_updated_at for the frontend response
-    all_ads.sort(key=lambda x: x.get('last_updated_at') or '', reverse=True)
-    etsy_products.sort(key=lambda x: x.get('last_updated_at') or '', reverse=True)
-    amazon_products.sort(key=lambda x: x.get('last_updated_at') or '', reverse=True)
-
-    print(f"✅ Search Success: {len(all_ads)} ads ({len([a for a in all_ads if a['platform']=='facebook'])} FB, {len([a for a in all_ads if a['platform']=='tiktok'])} TT), {len(etsy_products)} Etsy, {len(amazon_products)} Amazon")
-
-    # Save to history DB
-    search_id = save_search(search_term, tiktok_country, facebook_country, "", max_ads, all_ads)
-
-    # Optional: Run AI analysis on ALL scraped results
-    if data.get("auto_analyze"):
-        print(f"🤖 [Auto-Analyze] Processing all scraped results...")
-        all_to_analyze = []
-        if all_ads:
-            all_to_analyze.extend(all_ads)
-        if etsy_products:
-            all_to_analyze.extend(etsy_products)
-        if amazon_products:
-            all_to_analyze.extend(amazon_products)
+    for plt, ids in platforms_to_enrich:
+        if ids:
+            metadata_map = get_bulk_product_metadata(plt, ids)
+            target_list = all_ads if plt in ['facebook', 'tiktok'] else (amazon_products if plt == 'amazon' else etsy_products)
+            id_key = 'id' if plt in ['facebook', 'tiktok', 'etsy'] else 'asin'
+            if plt == 'amazon': id_key = 'id' # amazon uses 'id' in our list usually
             
-        def analyze_and_save(it):
-            plt = it.get("platform")
-            iid = it.get("id") or it.get("asin") or it.get("listing_id")
-            if not it.get("ai_analysis"):
-                print(f"🤖 [AI] Analyzing {plt}/{iid}...")
-                res = ai_analyzer.analyze_product(it.get("_raw", it), plt)
-                if res and "error" not in res:
-                    ok = save_ai_analysis(plt, iid, res)
-                    print(f"✅ [AI] Saved {plt}/{iid} -> ai_analysis: {ok}")
-                    it["ai_analysis"] = res
-                else:
-                    print(f"❌ [AI] Failed {plt}/{iid}: {res.get('error') if res else 'no response'}")
-            return it
+            for item in target_list:
+                item_id = str(item.get(id_key) or item.get('id') or item.get('asin') or item.get('listing_id'))
+                if item_id in metadata_map:
+                    m = metadata_map[item_id]
+                    item['ai_analysis'] = m.get('ai_analysis')
+                    item['last_updated_at'] = m.get('last_updated_at')
+                    item['created_at'] = m.get('created_at')
 
-        with ThreadPoolExecutor(max_workers=8) as ai_executor:
-            results = list(ai_executor.map(analyze_and_save, all_to_analyze))
-        print(f"✅ [Auto-Analyze] Done. Processed {len(results)} items.")
+    # Sort results for the UI
+    def sort_key(x):
+        val = x.get('last_updated_at')
+        if val is None: return ""
+        return val.isoformat() if hasattr(val, 'isoformat') else str(val)
 
-    # Stats
-    stats = {
-        "total": len(all_ads),
-        "tiktok": len([a for a in all_ads if a.get("platform") == "tiktok"]),
-        "facebook": len([a for a in all_ads if a.get("platform") == "facebook"]),
-        "etsy": len(etsy_products),
-        "amazon": len(amazon_products),
-        "images_only": len([a for a in all_ads if a.get("has_images") and not a.get("has_videos")]),
-        "videos_only": len([a for a in all_ads if a.get("has_videos") and not a.get("has_images")]),
-        "both": len([a for a in all_ads if a.get("has_images") and a.get("has_videos")]),
-    }
+    all_ads.sort(key=sort_key, reverse=True)
+    etsy_products.sort(key=sort_key, reverse=True)
+    amazon_products.sort(key=sort_key, reverse=True)
+
+    print(f"✅ Search Success: {len(all_ads)} ads, {len(etsy_products)} Etsy, {len(amazon_products)} Amazon. Sending to UI...")
+
+    # Everything else happens in background
+    def finalize_search_task(ads_copy, etsy_copy, amz_copy, term, tk_c, fb_c, auto_flag, m_ads):
+        print(f"🚀 [Background] Thread started for keyword: {term}")
+        try:
+            # 1. Save results to DB
+            from db import save_search, save_etsy_products, save_amazon_products
+            search_id = save_search(term, tk_c, fb_c, "", m_ads, ads_copy)
+            save_etsy_products(etsy_copy, term)
+            save_amazon_products(amz_copy, term)
+            print(f"📦 [Background] Results saved to DB (ID: {search_id}).")
+
+            # 2. Advertiser Enrichment (limit concurrency to 3)
+            fb_ads = [a for a in ads_copy if a.get("platform") == "facebook"]
+            if fb_ads:
+                page_ids = set()
+                for ad in fb_ads:
+                    raw = ad.get("raw", {}) or ad.get("_raw", {})
+                    pid = raw.get("page_id") or raw.get("snapshot", {}).get("page_id")
+                    if pid: page_ids.add(str(pid))
+                
+                if page_ids:
+                    print(f"📊 [Background] Enriching {len(page_ids)} FB advertisers (parallel max 3)...")
+                    ads_by_page = {}
+                    def fetch_adv(pid):
+                        try:
+                            # Use search_facebook_by_advertiser from outer scope
+                            res, err = search_facebook_by_advertiser([pid], 50)
+                            return res if not err else None
+                        except Exception as e:
+                            print(f"⚠️ Enrichment error for {pid}: {e}")
+                            return None
+
+                    with ThreadPoolExecutor(max_workers=3) as executor:
+                        results = list(executor.map(fetch_adv, page_ids))
+                        for r in results:
+                            if r: ads_by_page.update(r)
+                    
+                    if ads_by_page:
+                        from db import save_fb_advertiser_ads
+                        saved = save_fb_advertiser_ads(ads_by_page)
+                        print(f"✅ [Background] Saved {saved} enrichment ads.")
+
+            # 3. AI Analysis
+            if auto_flag:
+                print(f"🤖 [Auto-Analyze] Starting background analysis for {len(ads_copy) + len(etsy_copy) + len(amz_copy)} items...")
+                all_items = ads_copy + etsy_copy + amz_copy
+                
+                # Use a single connection for all analysis saves in this thread
+                from db import get_connection, release_connection, save_ai_analysis
+                batch_conn = get_connection()
+                try:
+                    def analyze_one(it):
+                        plt = it.get("platform")
+                        iid = it.get("id") or it.get("asin") or it.get("listing_id")
+                        if not it.get("ai_analysis"):
+                            res = ai_analyzer.analyze_product(it.get("_raw", it), plt)
+                            if res and "error" not in res:
+                                save_ai_analysis(plt, iid, res, conn=batch_conn)
+                        return it
+
+                    with ThreadPoolExecutor(max_workers=5) as ai_exec:
+                        list(ai_exec.map(analyze_one, all_items))
+                finally:
+                    release_connection(batch_conn)
+                print(f"✅ [Auto-Analyze] Done.")
+        except Exception as e:
+            import traceback
+            print(f"❌ [Background Error] {e}")
+            traceback.print_exc()
+
+    threading.Thread(
+        target=finalize_search_task,
+        args=(all_ads[:], etsy_products[:], amazon_products[:], search_term, tiktok_country, facebook_country, data.get("auto_analyze"), max_ads),
+        daemon=True
+    ).start()
 
     return jsonify({
         "ads": all_ads,
-        "etsy_products": etsy_products,
         "amazon_products": amazon_products,
-        "stats": stats,
-        "search_term": search_term,
-        "search_id": search_id,
-        "errors": errors if errors else None
+        "etsy_products": etsy_products,
+        "stats": {"total": len(all_ads) + len(amazon_products) + len(etsy_products)}
     })
 
 
@@ -562,7 +557,7 @@ def api_opportunities():
                 opp['landing_page'] = None
 
     cursor.close()
-    conn.close()
+    db.release_connection(conn)
 
     # Stats
     stats = {
@@ -609,7 +604,7 @@ def api_facebook_advertiser_ads(page_id):
 
     # Return ads from database
     from db import get_fb_advertiser_ads
-    ads = get_fb_advertiser_ads(page_id, limit=200)
+    ads = get_fb_advertiser_ads(page_id, limit=50)
     return jsonify({
         "page_id": page_id,
         "ad_count": len(ads),
@@ -1037,7 +1032,7 @@ def api_get_landing_page(ad_archive_id):
         })
     finally:
         cursor.close()
-        conn.close()
+        db.release_connection(conn)
 
 
 @app.route("/api/landing-pages/<ad_archive_id>/download", methods=["GET"])
@@ -1058,7 +1053,7 @@ def api_download_landing_page(ad_archive_id):
         row = cursor.fetchone()
     finally:
         cursor.close()
-        conn.close()
+        db.release_connection(conn)
 
     if not row or not row[0]:
         return jsonify({"error": "No scraped landing page found"}), 404
@@ -1086,7 +1081,7 @@ def api_view_landing_page(ad_archive_id):
         row = cursor.fetchone()
     finally:
         cursor.close()
-        conn.close()
+        db.release_connection(conn)
 
     if not row or not row[0]:
         return jsonify({"error": "No scraped landing page found"}), 404
@@ -1120,7 +1115,7 @@ def api_scrape_pending():
         pending = cursor.fetchall()
     finally:
         cursor.close()
-        conn.close()
+        db.release_connection(conn)
 
     if not pending:
         return jsonify({"message": "No pending landing pages to scrape", "count": 0})
@@ -1140,6 +1135,8 @@ def api_scrape_pending():
 def api_rebrand_landing_page(ad_archive_id):
     """Rebrand a scraped landing page using AI"""
     import rebrand as rebrand_service
+    import importlib
+    importlib.reload(rebrand_service)
 
     conn = db.get_connection()
     cursor = conn.cursor()
@@ -1152,7 +1149,7 @@ def api_rebrand_landing_page(ad_archive_id):
         row = cursor.fetchone()
     finally:
         cursor.close()
-        conn.close()
+        db.release_connection(conn)
 
     if not row or not row[0]:
         return jsonify({"error": "No scraped landing page found"}), 404
@@ -1170,25 +1167,35 @@ def api_rebrand_landing_page(ad_archive_id):
 
     # Run rebrand
     try:
-        result = rebrand_service.rebrand_landing(raw_html)
-
-        if not result.get("success"):
-            return jsonify({"error": result.get("error", "Rebrand failed")}), 500
+        # Use the new high-quality rebrand V2
+        result = rebrand_service.rebrand_landing_v2(raw_html)
+        
+        if not result.get('success'):
+            return jsonify({"error": result.get('error', 'Rebrand failed')}), 500
 
         # Save rebranded HTML and payment page to rebrand directory
         from datetime import datetime
+        import shutil
+        
+        original_dir = os.path.dirname(html_path)
         rebrand_dir = os.path.join("static/landing_pages", f"{ad_archive_id}_rebranded")
         os.makedirs(rebrand_dir, exist_ok=True)
         rebrand_html_path = os.path.join(rebrand_dir, "index.html")
         checkout_html_path = os.path.join(rebrand_dir, "checkout.html")
 
+        # Copy all assets from original directory to rebrand directory (excluding HTML files)
+        if os.path.exists(original_dir):
+            for item in os.listdir(original_dir):
+                s = os.path.join(original_dir, item)
+                d = os.path.join(rebrand_dir, item)
+                if os.path.isfile(s) and not item.endswith('.html'):
+                    shutil.copy2(s, d)
+                elif os.path.isdir(s):
+                    if os.path.exists(d): shutil.rmtree(d)
+                    shutil.copytree(s, d)
+
         with open(rebrand_html_path, 'w', encoding='utf-8') as f:
             f.write(result.get("cleaned_html", ""))
-
-        # Save the Stripe payment page
-        if result.get("payment_html"):
-            with open(checkout_html_path, 'w', encoding='utf-8') as f:
-                f.write(result.get("payment_html"))
 
         return jsonify({
             "success": True,
@@ -1200,7 +1207,7 @@ def api_rebrand_landing_page(ad_archive_id):
             "cta_text": result.get("cta_text", "Shop Now"),
             "slug": result.get("slug", ""),
             "local_html_path": rebrand_html_path,
-            "checkout_url": f"/api/landing-pages/{ad_archive_id}/rebrand/checkout",
+            "checkout_url": result.get("stripe_url", "#"),
             "preview_url": f"/api/landing-pages/{ad_archive_id}/rebrand/preview"
         })
     except Exception as e:
@@ -1218,18 +1225,6 @@ def api_rebrand_preview(ad_archive_id):
         return jsonify({"error": "No rebranded page found. Run /rebrand first."}), 404
 
     return send_file(rebrand_html_path, mimetype='text/html')
-
-
-@app.route("/api/landing-pages/<ad_archive_id>/rebrand/checkout", methods=["GET"])
-def api_rebrand_checkout(ad_archive_id):
-    """View the Stripe payment page for a rebranded landing"""
-    rebrand_dir = os.path.join("static/landing_pages", f"{ad_archive_id}_rebranded")
-    checkout_path = os.path.join(rebrand_dir, "checkout.html")
-
-    if not os.path.exists(checkout_path):
-        return jsonify({"error": "No checkout page found. Run /rebrand first."}), 404
-
-    return send_file(checkout_path, mimetype='text/html')
 
 
 @app.route("/api/landing-pages/<ad_archive_id>/rebrand/publish", methods=["POST"])
@@ -1273,6 +1268,18 @@ def api_rebrand_view(ad_archive_id):
         return jsonify({"error": "No rebranded page found. Run /rebrand first."}), 404
 
     return send_file(rebrand_html_path, mimetype='text/html')
+
+@app.route("/api/landing-pages/<ad_archive_id>/rebrand/<path:filename>")
+def serve_rebrand_assets(ad_archive_id, filename):
+    """Serve assets for a rebranded landing page"""
+    rebrand_dir = os.path.join("static/landing_pages", f"{ad_archive_id}_rebranded")
+    return send_from_directory(rebrand_dir, filename)
+
+@app.route("/api/landing-pages/<ad_archive_id>/view/<path:filename>")
+def serve_original_assets(ad_archive_id, filename):
+    """Serve assets for an original scraped landing page"""
+    original_dir = os.path.join("static/landing_pages", ad_archive_id)
+    return send_from_directory(original_dir, filename)
 
 
 if __name__ == "__main__":
