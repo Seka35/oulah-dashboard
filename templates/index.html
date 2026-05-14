@@ -1218,6 +1218,19 @@
                 `;
             }
 
+            // Add original URL to the Info section if it exists
+            const itemUrl = ad.link_url || ad.url || (ad.raw && ad.raw['Ad Detail URL']) || (ad._raw && ad._raw.link_url);
+            if (itemUrl && !platformHtml.includes('Original Ad URL') && !platformHtml.includes('Original Product URL')) {
+                // Insert it into the first info-grid found
+                const urlLabel = (platform === 'amazon' || platform === 'etsy') ? 'Original Product URL' : 'Original Ad URL';
+                const urlHtml = `
+                    <div class="info-item" style="grid-column: span 2;">
+                        <div class="lbl">${urlLabel}</div>
+                        <div class="val"><a href="${itemUrl}" target="_blank" style="color:var(--cyan); text-decoration:none; word-break:break-all;">${itemUrl}</a></div>
+                    </div>`;
+                platformHtml = platformHtml.replace('<div class="info-grid">', `<div class="info-grid">${urlHtml}`);
+            }
+
             document.getElementById('modal_body').innerHTML = aiHtml + platformHtml;
             document.getElementById('modal').classList.add('show');
 
@@ -1226,10 +1239,12 @@
                 loadAdvertiserAds(raw.page_id);
             }
 
-            // Fetch landing page info for Facebook ads
-            const adArchiveId = raw.ad_archive_id || ad.id || adArchiveId;
-            if (platform === 'facebook' && adArchiveId) {
-                loadLandingPageInfo(adArchiveId, ad.link_url);
+            // Fetch landing page info for all ads/products
+            const displayId = (platform === 'amazon' ? ad.asin : (platform === 'etsy' ? ad.listing_id : (ad.ad_archive_id || ad.id)));
+            const sourceUrl = ad.link_url || ad.url || (ad.raw && ad.raw['Ad Detail URL']) || (ad._raw && ad._raw.link_url);
+            
+            if (displayId) {
+                loadLandingPageInfo(displayId, sourceUrl);
             }
         }
 
