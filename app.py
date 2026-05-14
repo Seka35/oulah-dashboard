@@ -1092,6 +1092,9 @@ def api_get_landing_page(ad_archive_id):
         row = cursor.fetchone()
         if not row:
             return jsonify({"error": "Not found"}), 404
+        rebrand_dir = os.path.join("static/landing_pages", f"{ad_archive_id}_rebranded")
+        has_rebrand = os.path.exists(os.path.join(rebrand_dir, "index.html"))
+
         return jsonify({
             "id": row[0],
             "ad_archive_id": row[1],
@@ -1106,7 +1109,8 @@ def api_get_landing_page(ad_archive_id):
             "scrape_error": row[10],
             "local_html_path": row[11],
             "scraped_at": row[12].isoformat() if row[12] else None,
-            "r2_url": row[13]
+            "r2_url": row[13],
+            "has_rebrand": has_rebrand
         })
     finally:
         cursor.close()

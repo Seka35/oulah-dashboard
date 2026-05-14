@@ -1302,10 +1302,11 @@
                             <div style="font-size:0.85em;"><strong>Checkout:</strong> ${data.checkout_type || '–'}</div>
                         </div>
                         <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                            <a href="/api/landing-pages/${adArchiveId}/view" target="_blank" style="background:var(--accent-primary);color:white;padding:6px 12px;border-radius:6px;font-size:0.8em;text-decoration:none;">👁 View Page</a>
+                            <a href="/api/landing-pages/${adArchiveId}/view" target="_blank" style="background:var(--accent-primary);color:white;padding:6px 12px;border-radius:6px;font-size:0.8em;text-decoration:none;">👁 View Scraped</a>
+                            ${data.has_rebrand ? `<a href="/api/landing-pages/${adArchiveId}/rebrand/preview" target="_blank" style="background:var(--accent-secondary);color:white;padding:6px 12px;border-radius:6px;font-size:0.8em;text-decoration:none;">✨ View Rebranded</a>` : ''}
                             <a href="/api/landing-pages/${adArchiveId}/download" style="background:var(--success);color:white;padding:6px 12px;border-radius:6px;font-size:0.8em;text-decoration:none;">📥 Download ZIP</a>
                             <button onclick="scrapeLandingPage('${adArchiveId}')" style="background:var(--warning);color:white;padding:6px 12px;border-radius:6px;font-size:0.8em;border:none;cursor:pointer;">🔄 Rescrape</button>
-                            <button onclick="rebrandLandingPage('${adArchiveId}')" id="rebrand-btn-${adArchiveId}" style="background:var(--accent-secondary);color:white;padding:6px 12px;border-radius:6px;font-size:0.8em;border:none;cursor:pointer;">🎨 Rebrand LP</button>
+                            <button onclick="rebrandLandingPage('${adArchiveId}')" id="rebrand-btn-${adArchiveId}" style="background:var(--bg-input); border:1px solid var(--accent-secondary); color:var(--accent-secondary); padding:6px 12px;border-radius:6px;font-size:0.8em;cursor:pointer;">🎨 ${data.has_rebrand ? 'Redo Rebrand' : 'Rebrand LP'}</button>
                         </div>
                     `;
                     content.innerHTML = html;
