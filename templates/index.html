@@ -1045,6 +1045,10 @@
                     <div class="info-section">
                         <div class="info-title">Campaign Info</div>
                         <div class="info-grid">
+                            <div class="info-item" style="grid-column: span 2;">
+                                <div class="lbl">Original Ad URL</div>
+                                <div class="val"><a href="${ad.link_url}" target="_blank" style="color:var(--cyan); text-decoration:none; word-break:break-all;">${ad.link_url}</a></div>
+                            </div>
                             <div class="info-item"><div class="lbl">Archive ID</div><div class="val">${renderVal(raw.ad_archive_id)}</div></div>
                             <div class="info-item"><div class="lbl">Status</div><div class="val" style="color: ${raw.is_active ? 'var(--success)' : 'inherit'}">${raw.is_active ? '● Active' : '○ Inactive'}</div></div>
                             <div class="info-item"><div class="lbl">Start Date</div><div class="val">${renderVal(raw.start_date_formatted)}</div></div>
@@ -1079,6 +1083,10 @@
                     <div class="info-section">
                         <div class="info-title">Campaign Info</div>
                         <div class="info-grid">
+                            <div class="info-item" style="grid-column: span 2;">
+                                <div class="lbl">Original Ad URL</div>
+                                <div class="val"><a href="${ad.link_url}" target="_blank" style="color:var(--cyan); text-decoration:none; word-break:break-all;">${ad.link_url}</a></div>
+                            </div>
                             <div class="info-item"><div class="lbl">Ad ID</div><div class="val">${renderVal(raw['AD ID'])}</div></div>
                             <div class="info-item"><div class="lbl">First Shown</div><div class="val">${renderVal(raw['Ad Dates']?.[0]?.FirstShown)}</div></div>
                             <div class="info-item"><div class="lbl">Impression</div><div class="val">${renderVal(detailsMap['Impression'])}</div></div>
@@ -1119,11 +1127,11 @@
             // Fetch landing page info for Facebook ads
             const adArchiveId = raw.ad_archive_id || ad.id || adArchiveId;
             if (platform === 'facebook' && adArchiveId) {
-                loadLandingPageInfo(adArchiveId);
+                loadLandingPageInfo(adArchiveId, ad.link_url);
             }
         }
 
-        async function loadLandingPageInfo(adArchiveId) {
+        async function loadLandingPageInfo(adArchiveId, fallbackUrl = '') {
             const section = document.getElementById('landing-page-section');
             const content = document.getElementById('landing-page-content');
             if (!section || !content) return;
@@ -1135,7 +1143,11 @@
                 console.log('Landing page response:', resp.status, resp.statusText);
                 if (!resp.ok) {
                     // No landing page scraped yet - show scrape button
-                    content.innerHTML = `<div style="color:var(--text-secondary);font-size:0.85em;margin-bottom:10px;">No landing page scraped yet</div>
+                    content.innerHTML = `
+                        <div style="color:var(--text-secondary);font-size:0.85em;margin-bottom:10px;">
+                            ${fallbackUrl ? `<div style="margin-bottom:8px;"><strong>Original URL:</strong> <a href="${fallbackUrl}" target="_blank" style="color:var(--cyan); text-decoration:none; word-break:break-all;">${fallbackUrl}</a></div>` : ''}
+                            No landing page scraped yet
+                        </div>
                         <button onclick="scrapeLandingPage('${adArchiveId}')" style="background:var(--accent-primary);color:white;padding:6px 12px;border-radius:6px;font-size:0.8em;border:none;cursor:pointer;">🕷 Scrape Now</button>`;
                     return;
                 }
@@ -1145,6 +1157,7 @@
                 if (data.status === 'scraped') {
                     let html = `
                         <div style="margin-bottom:10px;">
+                            <div style="font-size:0.85em; margin-bottom:4px;"><strong>Original URL:</strong> <a href="${data.source_url}" target="_blank" style="color:var(--cyan); text-decoration:none; word-break:break-all;">${data.source_url}</a></div>
                             <div style="font-size:0.85em;"><strong>Domain:</strong> ${data.domain || '–'}</div>
                             <div style="font-size:0.85em;"><strong>Headline:</strong> ${data.headline ? data.headline.substring(0, 60) + '...' : '–'}</div>
                             <div style="font-size:0.85em;"><strong>Price:</strong> ${data.price_text || '–'}</div>
