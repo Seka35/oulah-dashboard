@@ -710,6 +710,84 @@ def api_amazon_search():
     return jsonify({"products": products, "saved": saved})
 
 
+@app.route("/api/facebook/import-manual", methods=["POST"])
+def api_facebook_import_manual():
+    """Manually import a Facebook ad by its Ad Library URL"""
+    if not APIFY_KEY:
+        return jsonify({"error": "Apify key not configured"}), 400
+
+    data = request.json
+    url = data.get("url", "").strip()
+    if not url:
+        return jsonify({"error": "URL required"}), 400
+
+    if "facebook.com/ads/library" not in url:
+        return jsonify({"error": "Invalid Facebook Ad Library URL"}), 400
+
+    from scrapers import scrape_facebook_ads_by_urls
+    ads, error = scrape_facebook_ads_by_urls([url])
+    if error:
+        return jsonify({"error": error}), 500
+
+    if not ads:
+        return jsonify({"error": "No ad found at this URL"}), 404
+
+    from db import save_search, save_ai_analysis, save_product_opportunity
+    import ai_analyzer
+    import classifier
+    
+    # Save to database using a special keyword
+    search_id = save_search("manual_import", "ALL", "ALL", "ALL", 1, ads)
+    
+    # Trigger AI analysis and classification for the imported ads
+    results = []
+    for ad in ads:
+        # 1. AI Analysis
+        verdict = ai_analyzer.analyze_product(ad["_raw"], "facebook")
+        if "error" not in verdict:
+            save_ai_analysis("facebook", ad["id"], verdict)
+        
+        # 2. Classification
+        classification = classifier.classify_ad(ad)
+        
+        # 3. If it looks like a digital product, save as opportunity
+        if classification['is_digital_product'] or verdict.get('confidence_score', 0) > 0.5:
+            # Prepare data for save_product_opportunity
+            opp_data = {
+                'product_name': verdict.get('product_name') or ad.get('advertiser_name', 'Manual Product'),
+                'product_category': classification.get('product_category') or verdict.get('category'),
+                'product_description': verdict.get('description') or ad.get('body_text'),
+                'price_text': verdict.get('price_text'),
+                'price_amount': verdict.get('price_amount'),
+                'advertiser_page_id': ad["_raw"].get("page_id") or ad["_raw"].get("pageId"),
+                'advertiser_name': ad.get('advertiser_name'),
+                'advertiser_platform': 'facebook',
+                'advertiser_page_url': f"https://www.facebook.com/{ad['_raw'].get('page_id')}" if ad["_raw"].get("page_id") else None,
+                'scaling_score': verdict.get('confidence_score', 0) * 10,
+                'scaling_tier': 'high' if verdict.get('confidence_score', 0) > 0.7 else 'medium',
+                'active_days': 1, # Default for manual
+                'ad_count': 1,
+                'is_scaling': verdict.get('confidence_score', 0) > 0.8,
+                'landing_page_url': ad.get('link_url'),
+                'status': 'new'
+            }
+            save_product_opportunity(opp_data)
+            classification['is_opportunity'] = True
+        
+        results.append({
+            "id": ad["id"],
+            "verdict": verdict,
+            "classification": classification
+        })
+
+    return jsonify({
+        "success": True, 
+        "ad_count": len(ads),
+        "results": results,
+        "ads": ads
+    })
+
+
 @app.route("/api/pipeline/run", methods=["POST"])
 def api_run_pipeline():
     """Manually trigger the intelligence pipeline with filters"""

@@ -194,6 +194,65 @@ def search_facebook(search_term, country="ALL", max_ads=20):
         ads.append(ad_entry)
     return ads, None
 
+def scrape_facebook_ads_by_urls(urls, max_ads=10):
+    """
+    Scrape specific Facebook Ad Library URLs (e.g. for manual import).
+    urls: list of strings (URLs)
+    """
+    if not urls:
+        return [], "No URLs provided"
+        
+    formatted_urls = [{"url": u} for u in urls]
+    
+    input_data = {
+        "count": max_ads, 
+        "scrapeAdDetails": True,
+        "scrapePageAds.activeStatus": "all", 
+        "scrapePageAds.countryCode": "ALL",
+        "urls": formatted_urls
+    }
+    
+    result = start_apify_actor(FACEBOOK_ACTOR, input_data)
+    if "error" in result: return [], result["error"]
+    
+    ads = []
+    # Reuse the same parsing logic as search_facebook
+    for item in result.get("ads", []):
+        if "error" in item: continue
+        snapshot = item.get("snapshot", {})
+        cards = snapshot.get("cards", [])
+        image_urls = []
+        videos = []
+        for card in cards:
+            if card.get("originalImageUrl"): image_urls.append(card.get("originalImageUrl"))
+            if card.get("videoSdUrl") or card.get("videoHdUrl"):
+                videos.append({"url": card.get("videoHdUrl") or card.get("videoSdUrl")})
+        for img in snapshot.get("images", []): 
+            if img and img not in image_urls: image_urls.append(img)
+        
+        link_url = item.get("link_url") or snapshot.get("link_url")
+        if not link_url and cards:
+            link_url = cards[0].get("link_url")
+        if not link_url:
+            link_url = snapshot.get("cta_link")
+
+        ad_id = item.get("ad_archive_id") or item.get("adArchiveId", "")
+        ad_entry = {
+            "id": ad_id, "platform": "facebook", "image_urls": image_urls, "videos": videos,
+            "has_images": len(image_urls) > 0, "has_videos": len(videos) > 0,
+            "first_shown_date": item.get("start_date_formatted", "N/A")[:10],
+            "last_shown_date": item.get("end_date_formatted", "N/A")[:10],
+            "status": "active" if item.get("is_active") else "inactive",
+            "reach": item.get("impressions_with_index", {}).get("impressionsText", "N/A"),
+            "advertiser_name": item.get("page_name", "Unknown"),
+            "body_text": cards[0].get("body", "") if cards else snapshot.get("body", ""),
+            "link_url": link_url,
+            "_raw": item
+        }
+        ads.append(ad_entry)
+    return ads, None
+
+
 def search_facebook_by_advertiser(page_ids, max_results_per_query=200):
     """
     Search Facebook ads by advertiser page IDs using dz_omar/facebook-ads-scraper-pro.
