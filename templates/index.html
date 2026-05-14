@@ -537,11 +537,16 @@
                 </div>
                 
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0;">
-                    <div class="scoring-tabs" id="databaseTabs" style="margin-bottom: 0;">
-                        <button class="tab-btn active" onclick="switchDatabaseTab('tiktok')">🎵 TikTok Ads</button>
-                        <button class="tab-btn" onclick="switchDatabaseTab('facebook')">📘 Facebook Ads</button>
-                        <button class="tab-btn" onclick="switchDatabaseTab('amazon')">📦 Amazon Products</button>
-                        <button class="tab-btn" onclick="switchDatabaseTab('etsy')">🛒 Etsy Products</button>
+                    <div style="display:flex; gap:12px; align-items:center;">
+                        <div class="scoring-tabs" id="databaseTabs" style="margin-bottom: 0;">
+                            <button class="tab-btn active" onclick="switchDatabaseTab('tiktok')">🎵 TikTok Ads</button>
+                            <button class="tab-btn" onclick="switchDatabaseTab('facebook')">📘 Facebook Ads</button>
+                            <button class="tab-btn" onclick="switchDatabaseTab('amazon')">📦 Amazon Products</button>
+                            <button class="tab-btn" onclick="switchDatabaseTab('etsy')">🛒 Etsy Products</button>
+                        </div>
+                        <button class="btn-primary" id="importFbBtn" onclick="openImportModal()" style="display:none; padding:8px 16px; font-size:0.85em; background:var(--accent-primary);">
+                            🔗 Import FB Ad
+                        </button>
                     </div>
                     
                     <div style="display:flex; align-items:center; gap:12px; background:rgba(16, 185, 129, 0.1); padding:8px 16px; border-radius:10px; border:1px solid rgba(16, 185, 129, 0.2);">
@@ -564,6 +569,8 @@
 
     </main>
 
+    </div>
+
     <!-- Modal Detail -->
     <div class="modal-overlay" id="modal">
         <div class="modal-container">
@@ -573,6 +580,37 @@
             </div>
             <div class="modal-body" id="modal_body">
                 <!-- Content injected via JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Import FB Ad -->
+    <div class="modal-overlay" id="importModal">
+        <div class="modal-container" style="max-width: 600px;">
+            <div class="modal-header">
+                <div class="modal-title">🔗 Import Facebook Ad Manually</div>
+                <button class="modal-close" onclick="closeImportModal()">×</button>
+            </div>
+            <div style="padding: 32px;">
+                <p style="font-size: 0.9em; color: var(--text-secondary); margin-bottom: 24px;">
+                    Enter a specific Facebook Ad Library URL to import it. The system will scrape the ad, analyze it with AI, and track it as an opportunity.
+                </p>
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label>Facebook Ad Library URL</label>
+                    <input type="text" id="importUrl" class="form-control" placeholder="https://www.facebook.com/ads/library/?id=...">
+                    <div style="font-size: 0.75em; color: var(--text-secondary); margin-top: 6px;">Format: https://www.facebook.com/ads/library/?id=123456789</div>
+                </div>
+                <div id="importLoading" style="display:none; text-align:center; padding: 20px;">
+                    <div class="spinner" style="width:30px; height:30px; margin-bottom:12px;"></div>
+                    <div style="font-size:0.85em; color:var(--text-secondary);">Scraping and analyzing... This may take up to 1 minute.</div>
+                </div>
+                <div id="importError" class="error-msg" style="display:none; padding:12px; font-size:0.85em; margin-bottom:20px;"></div>
+                <div id="importSuccess" class="success-msg" style="display:none; padding:12px; background:rgba(16, 185, 129, 0.1); border:1px solid var(--success); color:var(--success); border-radius:10px; text-align:center; margin-bottom:20px; font-size:0.85em;"></div>
+                
+                <div style="display:flex; justify-content:flex-end; gap:12px; margin-top:32px;">
+                    <button class="filter-btn" onclick="closeImportModal()">Cancel</button>
+                    <button class="btn-primary" id="confirmImportBtn" onclick="confirmImport()">Import Ad</button>
+                </div>
             </div>
         </div>
     </div>
@@ -587,6 +625,63 @@
         let allAmazonProducts = [];
         let currentDatabaseTab = 'tiktok';
         let fbAdvertiserCounts = {};  // page_id -> ad count
+
+        function openImportModal() {
+            document.getElementById('importModal').classList.add('show');
+            document.getElementById('importUrl').value = '';
+            document.getElementById('importError').style.display = 'none';
+            document.getElementById('importSuccess').style.display = 'none';
+            document.getElementById('importLoading').style.display = 'none';
+            document.getElementById('confirmImportBtn').disabled = false;
+        }
+
+        function closeImportModal() {
+            document.getElementById('importModal').classList.remove('show');
+        }
+
+        async function confirmImport() {
+            const url = document.getElementById('importUrl').value.trim();
+            if (!url) return alert('Please enter a URL');
+
+            const btn = document.getElementById('confirmImportBtn');
+            const loading = document.getElementById('importLoading');
+            const errorDiv = document.getElementById('importError');
+            const successDiv = document.getElementById('importSuccess');
+
+            btn.disabled = true;
+            loading.style.display = 'block';
+            errorDiv.style.display = 'none';
+            successDiv.style.display = 'none';
+
+            try {
+                const resp = await fetch('/api/facebook/import-manual', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: url })
+                });
+                
+                const data = await resp.json();
+                loading.style.display = 'none';
+
+                if (data.success) {
+                    successDiv.textContent = `Successfully imported ${data.ad_count} ad(s). AI analysis completed.`;
+                    successDiv.style.display = 'block';
+                    setTimeout(() => {
+                        closeImportModal();
+                        loadAllGlobalData(); // Reload to show the new ad
+                    }, 2000);
+                } else {
+                    errorDiv.textContent = 'Import failed: ' + (data.error || 'Unknown error');
+                    errorDiv.style.display = 'block';
+                    btn.disabled = false;
+                }
+            } catch (err) {
+                loading.style.display = 'none';
+                errorDiv.textContent = 'Error: ' + err.message;
+                errorDiv.style.display = 'block';
+                btn.disabled = false;
+            }
+        }
 
 
         // Media filter buttons
@@ -676,6 +771,13 @@
                 const tabs = ['tiktok', 'facebook', 'amazon', 'etsy'];
                 btn.classList.toggle('active', tabs[idx] === tab);
             });
+            
+            // Show/hide import button only for facebook
+            const importBtn = document.getElementById('importFbBtn');
+            if (importBtn) {
+                importBtn.style.display = (tab === 'facebook') ? 'block' : 'none';
+            }
+            
             sortAndRender();
         }
 

@@ -250,9 +250,6 @@
                 <p>Ads that sell digital products and show signs of scaling</p>
             </div>
             <div class="header-actions">
-                <button class="btn" onclick="openImportModal()">
-                    🔗 Import FB Ad
-                </button>
                 <button class="btn" id="openCriteriaBtn" onclick="openCriteriaModal()">
                     ⚙️ Product Criteria
                 </button>
@@ -511,96 +508,9 @@
         </div>
     </div>
 
-    <!-- Modal: Import FB Ad -->
-    <div class="modal-overlay" id="importModal">
-        <div class="modal">
-            <div class="modal-header">
-                <h3>Import Facebook Ad Manually</h3>
-                <button class="modal-close" onclick="closeImportModal()">&times;</button>
-            </div>
-            <div class="modal-body">
-                <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 20px;">
-                    Enter a specific Facebook Ad Library URL to import it directly into the database.
-                    The system will scrape the ad, analyze it with AI, and identify product opportunities.
-                </p>
-                <div class="form-group">
-                    <label>Facebook Ad Library URL</label>
-                    <input type="text" id="importUrl" placeholder="https://www.facebook.com/ads/library/?id=...">
-                    <div class="form-hint">Format: https://www.facebook.com/ads/library/?id=123456789</div>
-                </div>
-                <div id="importLoading" style="display:none; text-align:center; padding: 20px;">
-                    <div class="loading">Scraping and analyzing... This may take up to 1 minute.</div>
-                </div>
-                <div id="importError" class="error-msg" style="display:none"></div>
-                <div id="importSuccess" class="success-msg" style="display:none"></div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn" onclick="closeImportModal()">Cancel</button>
-                <button class="btn primary" id="confirmImportBtn" onclick="confirmImport()">Import Ad</button>
-            </div>
-        </div>
-    </div>
-
     <script>
         let currentTier = '';
         let currentCriteriaTab = 'keywords';
-
-        function openImportModal() {
-            document.getElementById('importModal').classList.add('open');
-            document.getElementById('importUrl').value = '';
-            document.getElementById('importError').style.display = 'none';
-            document.getElementById('importSuccess').style.display = 'none';
-            document.getElementById('importLoading').style.display = 'none';
-            document.getElementById('confirmImportBtn').disabled = false;
-        }
-
-        function closeImportModal() {
-            document.getElementById('importModal').classList.remove('open');
-        }
-
-        async function confirmImport() {
-            const url = document.getElementById('importUrl').value.trim();
-            if (!url) return alert('Please enter a URL');
-
-            const btn = document.getElementById('confirmImportBtn');
-            const loading = document.getElementById('importLoading');
-            const errorDiv = document.getElementById('importError');
-            const successDiv = document.getElementById('importSuccess');
-
-            btn.disabled = true;
-            loading.style.display = 'block';
-            errorDiv.style.display = 'none';
-            successDiv.style.display = 'none';
-
-            try {
-                const resp = await fetch('/api/facebook/import-manual', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ url: url })
-                });
-                
-                const data = await resp.json();
-                loading.style.display = 'none';
-
-                if (data.success) {
-                    successDiv.textContent = `Successfully imported ${data.ad_count} ad(s). AI analysis completed.`;
-                    successDiv.style.display = 'block';
-                    setTimeout(() => {
-                        closeImportModal();
-                        loadOpportunities();
-                    }, 2000);
-                } else {
-                    errorDiv.textContent = 'Import failed: ' + (data.error || 'Unknown error');
-                    errorDiv.style.display = 'block';
-                    btn.disabled = false;
-                }
-            } catch (err) {
-                loading.style.display = 'none';
-                errorDiv.textContent = 'Error: ' + err.message;
-                errorDiv.style.display = 'block';
-                btn.disabled = false;
-            }
-        }
 
         async function loadOpportunities() {
             const grid = document.getElementById('opportunitiesGrid');
