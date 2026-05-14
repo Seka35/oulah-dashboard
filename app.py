@@ -28,6 +28,9 @@ import db
 from db import init_db, save_search, get_search_history, get_search_results, save_ai_analysis, get_product_metadata
 import ai_analyzer
 
+# Initialize Database
+init_db()
+
 def download_and_save_media(url, platform, item_id, media_type):
     if not url or "..." in url:
         return None
@@ -1363,6 +1366,30 @@ def serve_original_assets(ad_archive_id, filename):
     original_dir = os.path.join("static/landing_pages", ad_archive_id)
     return send_from_directory(original_dir, filename)
 
+
+@app.route("/api/prompts", methods=["GET"])
+def api_get_prompts():
+    """Get all system prompts"""
+    conn = db.get_connection()
+    cursor = conn.cursor(cursor_factory=db.DictCursor)
+    try:
+        cursor.execute("SELECT id, prompt, description, updated_at FROM system_prompts ORDER BY id")
+        prompts = [dict(r) for r in cursor.fetchall()]
+        return jsonify(prompts)
+    finally:
+        cursor.close()
+        db.release_connection(conn)
+
+@app.route("/api/prompts/<prompt_id>", methods=["POST"])
+def api_update_prompt(prompt_id):
+    """Update a system prompt"""
+    data = request.json
+    prompt = data.get('prompt')
+    if not prompt:
+        return jsonify({"error": "Prompt cannot be empty"}), 400
+    
+    success = db.update_system_prompt(prompt_id, prompt)
+    return jsonify({"success": success})
 
 if __name__ == "__main__":
     init_db()

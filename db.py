@@ -101,8 +101,117 @@ def get_media_url(local_path, platform="facebook", ad_id=None):
     return f"/media/{local_path}"
 
 def init_db():
-    # Execute schema.sql if needed, or assume it's run externally
-    pass
+    """Initialize database tables if they don't exist"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        # Create settings table if not exists
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS settings (
+                key TEXT PRIMARY KEY,
+                value TEXT,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        
+        # Create system_prompts table if not exists
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS system_prompts (
+                id TEXT PRIMARY KEY,
+                prompt TEXT,
+                description TEXT,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        
+        # Ensure 'prompt' column exists (in case table existed with different schema)
+        cursor.execute("ALTER TABLE system_prompts ADD COLUMN IF NOT EXISTS prompt TEXT")
+        
+        # Insert default rebrand prompts if they don't exist
+        rebrand_plan_prompt = """You are a professional e-commerce rebranding expert.
+Analyze the following landing page HTML and generate a complete rebranding plan.
+
+Rules:
+1. Brand Name: Invent a new, catchy, and premium brand name.
+2. Product Name: Create a premium version of the product name.
+3. Description: Write a high-converting, 2-3 sentence product description.
+4. Logo: Generate a stylized, modern SVG logo (valid SVG code).
+5. Theme: Choose a primary brand color (Hex).
+
+Return ONLY a JSON object with these keys:
+{
+  "brand_name": "...",
+  "new_product_name": "...",
+  "brand_tagline": "...",
+  "product_description": "...",
+  "brand_color": "#HEX",
+  "logo_svg": "<svg>...</svg>",
+  "cta_text": "..."
+}"""
+
+        rebrand_reconstruction_prompt = """You are a master of HTML rebranding.
+I want you to REWRITE the following landing page HTML to apply a new brand identity.
+
+REBRANDING PLAN:
+- New Brand: {brand_name}
+- New Product: {product_name}
+- Tagline: {tagline}
+- Price: Always show $19.00
+- Stripe Checkout URL: {stripe_url}
+- Brand Color: {brand_color}
+
+INSTRUCTIONS:
+1. Replace the original logo with the provided brand name or logo.
+2. Change all product names and brand mentions to the new ones.
+3. Change all prices to $19.00.
+4. Replace ALL button links and CTA links (Buy Now, Get Started, etc.) with the Stripe Checkout URL.
+5. Replace the footer with a clean copyright: "Copyright 2026 {brand_name}". Remove all original site links.
+6. Neutralize all other links to "#".
+7. Return ONLY the complete, functional HTML code."""
+
+        # Insert legacy product analysis prompt
+        product_analysis_prompt = """You are a professional e-commerce product researcher and scaling expert.
+Your goal is to analyze the following ad content and landing page metadata to determine the "scaling potential" of this product.
+
+Return ONLY a JSON object with these keys:
+{
+  "product_name": "...",
+  "category": "...",
+  "target_audience": "...",
+  "pain_points": ["...", "..."],
+  "unique_selling_points": ["...", "..."],
+  "estimated_markup": "3x",
+  "scaling_verdict": "High|Medium|Low",
+  "scaling_reason": "...",
+  "competitor_price_estimate": "$...",
+  "suggested_ad_copy_angles": ["...", "..."]
+}"""
+
+        cursor.execute("""
+            INSERT INTO system_prompts (id, prompt, description)
+            VALUES (%s, %s, %s)
+            ON CONFLICT (id) DO NOTHING
+        """, ("product_analysis", product_analysis_prompt.strip(), "Main product intelligence analysis"))
+
+        cursor.execute("""
+            INSERT INTO system_prompts (id, prompt, description)
+            VALUES (%s, %s, %s)
+            ON CONFLICT (id) DO NOTHING
+        """, ("rebrand_plan", rebrand_plan_prompt.strip(), "Phase 1: Generate brand name and assets"))
+        
+        cursor.execute("""
+            INSERT INTO system_prompts (id, prompt, description)
+            VALUES (%s, %s, %s)
+            ON CONFLICT (id) DO NOTHING
+        """, ("rebrand_reconstruction", rebrand_reconstruction_prompt.strip(), "Phase 2: Full AI HTML Reconstruction (Optional)"))
+
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        print(f"Error initializing database: {e}")
+    finally:
+        cursor.close()
+        release_connection(conn)
 
 def get_setting(key, default=None):
     """Retrieve a setting from the settings table"""
@@ -198,7 +307,7 @@ def save_etsy_products(products, search_keyword):
                     price = EXCLUDED.price,
                     price_amount = EXCLUDED.price_amount,
                     rating = EXCLUDED.rating,
-                    review_count = EXCLUDED.reVIEW_COUNT,
+                    review_count = EXCLUDED.review_count,
                     image_url = EXCLUDED.image_url,
                     last_updated_at = CURRENT_TIMESTAMP,
                     search_keywords = (SELECT array_agg(DISTINCT k) FROM unnest(COALESCE(etsy_products.search_keywords, '{}') || EXCLUDED.search_keywords) k),
@@ -2211,6 +2320,43 @@ def save_system_prompt_history(previous_value, new_value):
     except Exception as e:
         conn.rollback()
         print(f"Error saving system prompt history: {e}")
+        return False
+    finally:
+        cursor.close()
+        release_connection(conn)
+
+def get_system_prompt(prompt_id, default=None):
+    """Retrieve a prompt from the system_prompts table"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT prompt FROM system_prompts WHERE id = %s", (prompt_id,))
+        row = cursor.fetchone()
+        if row:
+            return row[0]
+        return default
+    except Exception as e:
+        print(f"Error getting prompt {prompt_id}: {e}")
+        return default
+    finally:
+        cursor.close()
+        release_connection(conn)
+
+def update_system_prompt(prompt_id, prompt):
+    """Update a prompt in the system_prompts table"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            UPDATE system_prompts 
+            SET prompt = %s, updated_at = CURRENT_TIMESTAMP
+            WHERE id = %s
+        """, (prompt, prompt_id))
+        conn.commit()
+        return True
+    except Exception as e:
+        conn.rollback()
+        print(f"Error updating prompt {prompt_id}: {e}")
         return False
     finally:
         cursor.close()

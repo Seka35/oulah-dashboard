@@ -35,6 +35,8 @@ LANDINGS_BASE_URL = os.getenv("LANDINGS_BASE_URL", "https://ignuva.shop")
 META_PIXEL_ID = os.getenv("META_PIXEL_ID", "")
 
 
+import db
+
 def slugify(name: str) -> str:
     slug = name.lower().strip()
     slug = re.sub(r'[^a-z0-9\-_]', '-', slug)
@@ -86,28 +88,28 @@ def analyze_with_ai(product_info: dict, raw_html: str) -> dict:
     pass # I'll keep the actual code but wrap it or just implement the new one below
 
 def get_rebrand_plan(raw_html: str) -> dict:
-    """Phase 1: Planning with Gemini 3.1 Pro"""
+    """Phase 1: Planning with AI using prompt from DB"""
     if not OPENROUTER_KEY:
         raise ValueError("OPENROUTER_KEY not set in .env")
 
     client = OpenAI(api_key=OPENROUTER_KEY, base_url=OPENROUTER_BASE)
 
-    # We send a truncated version of HTML if it's too big, but Gemini can handle 1M tokens.
-    # To save tokens and cost, we might want to send only the first 100k of HTML.
-    html_sample = raw_html[:150000]
+    # We send a truncated version of HTML if it's too big
+    html_sample = raw_html[:100000]
 
-    prompt = f"""You are a professional e-commerce rebranding expert.
+    # Get prompt from DB
+    default_prompt = """You are a professional e-commerce rebranding expert.
 Analyze the following landing page HTML and generate a complete rebranding plan.
 
 Rules:
-1. Brand Name: Invent a new, catchy, and relevant brand name.
+1. Brand Name: Invent a new, catchy, and premium brand name.
 2. Product Name: Create a premium version of the product name.
 3. Description: Write a high-converting, 2-3 sentence product description.
 4. Logo: Generate a stylized, modern SVG logo (valid SVG code).
 5. Theme: Choose a primary brand color (Hex).
 
 Return ONLY a JSON object with these keys:
-{{
+{
   "brand_name": "...",
   "new_product_name": "...",
   "brand_tagline": "...",
@@ -115,11 +117,11 @@ Return ONLY a JSON object with these keys:
   "brand_color": "#HEX",
   "logo_svg": "<svg>...</svg>",
   "cta_text": "..."
-}}
+}"""
+    
+    system_prompt = db.get_system_prompt("rebrand_plan", default_prompt)
 
-HTML Content:
-{html_sample}
-"""
+    prompt = f"{system_prompt}\n\nHTML Content:\n{html_sample}"
 
     response = client.chat.completions.create(
         model=OPENROUTER_MODEL,
@@ -139,7 +141,7 @@ HTML Content:
 
 
 def reconstruct_html(raw_html: str, plan: dict, stripe_url: str) -> str:
-    """Phase 2: Full HTML Reconstruction with Gemini 3.1 Pro"""
+    """Phase 2: Full HTML Reconstruction with AI using prompt from DB"""
     if not OPENROUTER_KEY:
         raise ValueError("OPENROUTER_KEY not set in .env")
 
@@ -149,39 +151,45 @@ def reconstruct_html(raw_html: str, plan: dict, stripe_url: str) -> str:
     # We'll try to send up to 300k characters.
     html_full = raw_html[:300000]
 
-    prompt = f"""You are an expert web developer and CRO specialist.
+    default_prompt = """You are a master of HTML rebranding.
 I want you to REWRITE the following landing page HTML to apply a new brand identity.
 
 REBRANDING PLAN:
-- New Brand: {plan['brand_name']}
-- New Product: {plan['new_product_name']}
-- Tagline: {plan['brand_tagline']}
+- New Brand: {brand_name}
+- New Product: {product_name}
+- Tagline: {tagline}
 - Price: Always show $19.00
 - Stripe Checkout URL: {stripe_url}
-- Brand Color: {plan['brand_color']}
-- Logo SVG: {plan['logo_svg']}
+- Brand Color: {brand_color}
 
 INSTRUCTIONS:
-1. Keep the EXACT structure, CSS, and images. Do NOT remove any existing images or break the layout.
-2. Replace the original logo with the provided SVG logo.
-3. Change all product names and brand mentions to the new ones.
-4. Change all prices to $19.
-5. Replace ALL button links and CTA links (Buy Now, Get Started, etc.) with the Stripe Checkout URL: {stripe_url}
-6. Neutralize all other links (footer, social media, "contact us", original site links) by setting them to href="#". NOTHING should redirect to the original site.
-7. Remove any tracking scripts (Facebook Pixel, Google Analytics, etc.) if you see them.
-8. Update the <title> and meta tags.
+1. Replace the original logo with the provided brand name or logo.
+2. Change all product names and brand mentions to the new ones.
+3. Change all prices to $19.00.
+4. Replace ALL button links and CTA links (Buy Now, Get Started, etc.) with the Stripe Checkout URL.
+5. Replace the footer with a clean copyright: "Copyright 2026 {brand_name}". Remove all original site links.
+6. Neutralize all other links to "#".
+7. Return ONLY the complete, functional HTML code."""
 
-Return ONLY the complete, functional HTML code. No explanations, no markdown blocks.
-"""
+    system_prompt = db.get_system_prompt("rebrand_reconstruction", default_prompt)
+    
+    # Format the prompt with plan data
+    formatted_prompt = system_prompt.format(
+        brand_name=plan.get('brand_name', 'Brand'),
+        product_name=plan.get('new_product_name', 'Product'),
+        tagline=plan.get('brand_tagline', ''),
+        stripe_url=stripe_url,
+        brand_color=plan.get('brand_color', '#6366f1')
+    )
 
     response = client.chat.completions.create(
         model=OPENROUTER_MODEL,
         messages=[
             {"role": "system", "content": "You are a master of HTML rebranding. You return only code."},
-            {"role": "user", "content": prompt},
+            {"role": "user", "content": formatted_prompt},
             {"role": "user", "content": f"HTML TO REBRAND:\n{html_full}"}
         ],
-        temperature=0.3 # Lower temperature for better structural fidelity
+        temperature=0.3
     )
 
     content = response.choices[0].message.content.strip()
@@ -694,8 +702,7 @@ def test_vps_connection() -> dict:
 
 def surgical_rebrand(raw_html: str, plan: dict, stripe_url: str) -> str:
     """
-    Surgically rebrand the HTML without rewriting it entirely.
-    Uses BeautifulSoup for text/link/logo replacement.
+    Surgically rebrand the HTML with AGGRESSIVE replacement and footer sanitization.
     """
     soup = BeautifulSoup(raw_html, "lxml")
     
@@ -705,30 +712,40 @@ def surgical_rebrand(raw_html: str, plan: dict, stripe_url: str) -> str:
     brand_color = plan.get("brand_color", "#6366f1")
     logo_svg = plan.get("logo_svg", "")
 
+    # Detect Original Brand (if possible)
+    original_info = extract_product_info(raw_html)
+    original_brand = original_info.get("brand", "").strip()
+    original_product = original_info.get("name", "").strip()
+
     # 1. Update Metadata
     if soup.title:
         soup.title.string = f"{product_name} | {brand_name}"
     
-    # 2. Add Brand Styles
+    # 2. Add Brand Styles & Global Reset
     style_tag = soup.new_tag("style")
     style_tag.string = f"""
         /* Rebrand Overrides */
         .rebrand-price {{ color: {brand_color} !important; font-weight: bold !important; font-size: 1.2em !important; }}
-        .rebrand-cta {{ background-color: {brand_color} !important; color: white !important; padding: 15px 30px !important; border-radius: 8px !important; text-decoration: none !important; font-weight: bold !important; display: inline-block !important; border: none !important; cursor: pointer !important; }}
+        .rebrand-cta {{ background-color: {brand_color} !important; color: white !important; padding: 15px 30px !important; border-radius: 8px !important; text-decoration: none !important; font-weight: bold !important; display: inline-block !important; border: none !important; cursor: pointer !important; text-align: center !important; min-width: 200px !important; }}
         .rebrand-cta:hover {{ filter: brightness(1.1); }}
-        .rebrand-logo-container {{ padding: 20px; text-align: center; background: white; }}
-        .rebrand-logo-svg {{ max-height: 60px; width: auto; }}
-        .rebrand-logo-svg svg {{ max-height: 60px; width: auto; }}
+        .rebrand-logo-container {{ padding: 25px 20px; text-align: center; background: white; border-bottom: 1px solid #eee; }}
+        .rebrand-logo-svg {{ max-height: 50px; width: auto; display: inline-block; }}
+        .rebrand-logo-svg svg {{ max-height: 50px; width: auto; }}
+        .rebrand-footer {{ padding: 40px 20px; text-align: center; background: #111; color: #888; font-family: sans-serif; font-size: 13px; border-top: 1px solid #222; }}
+        .rebrand-footer p {{ margin: 5px 0; }}
         
-        /* Hide original header/footer/nav to clean up */
-        header, footer, nav, .nav, .footer, #header, #footer, [class*="footer"], [class*="header"], [class*="nav-"] {{ 
+        /* Aggressive Hide of original site components */
+        header, nav, .nav, #header, #nav, [class*="header"], [class*="nav-"], [data-testid*="header"], [data-testid*="nav"] {{ 
             display: none !important; 
+        }}
+        footer, .footer, #footer, [class*="footer"], [data-testid*="footer"] {{
+            display: none !important;
         }}
     """
     if soup.head:
         soup.head.append(style_tag)
 
-    # 3. Text Replacements
+    # 3. Dynamic Text Replacements
     replacements = {
         "monday.com": brand_name,
         "monday": brand_name,
@@ -736,8 +753,21 @@ def surgical_rebrand(raw_html: str, plan: dict, stripe_url: str) -> str:
         "asics": brand_name,
         "amazon": brand_name,
         "etsy": brand_name,
+        "contentcreator.com": brand_name,
+        "contentcreator": brand_name
     }
     
+    # Add detected brand and product to replacements
+    if original_brand and len(original_brand) > 2:
+        replacements[original_brand] = brand_name
+    if original_product and len(original_product) > 5:
+        replacements[original_product] = product_name
+        # Also try to replace common sub-strings of product name
+        if " " in original_product:
+            for part in original_product.split():
+                if len(part) > 3 and part.lower() not in ["the", "and", "for", "with"]:
+                    replacements[part] = brand_name
+
     for text_node in soup.find_all(string=True):
         if text_node.parent and text_node.parent.name not in ["script", "style", "head"]:
             original_text = str(text_node)
@@ -749,39 +779,71 @@ def surgical_rebrand(raw_html: str, plan: dict, stripe_url: str) -> str:
             if new_text != original_text:
                 text_node.replace_with(new_text)
 
-    # 4. Price updates
+    # 4. Global Link & Button Hijack (EVERYTHING goes to Stripe)
+    target_payment_url = stripe_url if stripe_url and stripe_url != "#" else "https://checkout.stripe.com/preview"
+    
+    # Hijack all anchor tags
+    for a in soup.find_all("a"):
+        a["href"] = target_payment_url
+        if "onclick" in a.attrs:
+            del a["onclick"]
+        
+        # If it looks like a button, apply rebrand-cta style
+        btn_text = a.get_text().lower()
+        if any(word in btn_text for word in ["buy", "get", "start", "order", "purchase", "add", "checkout", "shop", "join", "enroll", "sign"]):
+            a["class"] = a.get("class", []) + ["rebrand-cta"]
+    
+    # Hijack all buttons
+    for btn in soup.find_all(["button", "input"]):
+        if btn.name == "input" and btn.get("type") not in ["button", "submit", "image"]:
+            continue
+            
+        # Replace button with an anchor tag to ensure it works consistently
+        new_a = soup.new_tag("a", href=target_payment_url)
+        new_a["class"] = btn.get("class", []) + ["rebrand-cta"]
+        new_a.string = btn.get_text() or btn.get("value", "GET STARTED")
+        btn.replace_with(new_a)
+
+    # 5. Hijack forms (if any)
+    for form in soup.find_all("form"):
+        form["action"] = target_payment_url
+        form["method"] = "GET"
+
+    # 6. Price updates
     price_pattern = re.compile(r'([\$€£¥]\s*\d+([.,]\d{2})?|\d+([.,]\d{2})?\s*[\$€£¥])')
     for text_node in soup.find_all(string=True):
-        if text_node.parent and text_node.parent.name not in ["script", "style", "head"]:
+        if text_node.parent and text_node.parent.name not in ["script", "style", "head", "a"]:
             if price_pattern.search(str(text_node)):
                 new_text = price_pattern.sub("$19.00", str(text_node))
                 text_node.replace_with(new_text)
 
-    # 5. Link Sanitization & CTA replacement
-    for a in soup.find_all("a"):
-        btn_text = a.get_text().lower()
-        if any(word in btn_text for word in ["buy", "get", "start", "order", "purchase", "add to cart", "checkout", "shop"]):
-            a["href"] = stripe_url
-            # Force $19.00 in button text
-            if price_pattern.search(a.get_text()):
-                a.string = price_pattern.sub("$19.00", a.get_text())
-        else:
-            href = a.get("href", "")
-            if href.startswith("http") or href.startswith("//"):
-                a["href"] = "#"
-
-    # 6. Inject Logo
+    # 7. Header/Logo Injection
     if soup.body:
         logo_div = soup.new_tag("div", attrs={"class": "rebrand-logo-container"})
-        if logo_svg:
+        if logo_svg and "<svg" in logo_svg:
             logo_div.append(BeautifulSoup(f'<div class="rebrand-logo-svg">{logo_svg}</div>', "html.parser"))
         else:
-            logo_div.append(BeautifulSoup(f'<h1 style="color:{brand_color}; margin:0;">{brand_name}</h1>', "html.parser"))
+            logo_div.append(BeautifulSoup(f'<h1 style="color:{brand_color}; margin:0; font-family:sans-serif; text-transform:uppercase; letter-spacing:2px;">{brand_name}</h1>', "html.parser"))
         
         if tagline:
-            logo_div.append(BeautifulSoup(f'<p style="color:#666; margin:5px 0 0 0; font-size:14px;">{tagline}</p>', "html.parser"))
+            logo_div.append(BeautifulSoup(f'<p style="color:#666; margin:5px 0 0 0; font-size:14px; font-style:italic;">{tagline}</p>', "html.parser"))
         
         soup.body.insert(0, logo_div)
+        
+        # 8. Footer Injection (Sanitized)
+        footer_div = soup.new_tag("div", attrs={"class": "rebrand-footer"})
+        footer_html = f"""
+            <p>&copy; 2026 {brand_name}. All Rights Reserved.</p>
+            <p style="font-size:11px; margin-top:15px; opacity:0.6;">This site is not a part of the Facebook website or Facebook Inc. Additionally, This site is NOT endorsed by Facebook in any way. FACEBOOK is a trademark of FACEBOOK, Inc.</p>
+        """
+        footer_div.append(BeautifulSoup(footer_html, "html.parser"))
+        soup.body.append(footer_div)
+
+    # 9. Final Cleanup: Remove original scripts that might interfere
+    for script in soup.find_all("script"):
+        src = script.get("src", "").lower()
+        if any(x in src for x in ["google", "facebook", "tiktok", "pixel", "analytics", "hotjar"]):
+            script.decompose()
 
     return str(soup)
 

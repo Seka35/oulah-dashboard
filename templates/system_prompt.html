@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>System Prompt | Ad Intelligence</title>
+    <title>System Prompts | Ad Intelligence</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -42,33 +42,52 @@
         .nav-link { color: var(--text-secondary); text-decoration: none; font-weight: 500; font-size: 0.9em; transition: color 0.2s; }
         .nav-link:hover, .nav-link.active { color: var(--text-primary); }
 
-        .container { max-width: 1200px; margin: 0 auto; padding: 32px; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 32px; display: grid; grid-template-columns: 300px 1fr; gap: 32px; }
 
-        /* Header */
-        .page-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 32px; }
-        .page-title h2 { font-size: 1.8em; font-weight: 700; margin-bottom: 8px; }
-        .page-title p { color: var(--text-secondary); font-size: 0.95em; }
+        /* Sidebar */
+        .sidebar { display: flex; flex-direction: column; gap: 12px; }
+        .prompt-item {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: 16px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .prompt-item:hover { border-color: var(--accent-primary); background: rgba(99, 102, 241, 0.05); }
+        .prompt-item.active { border-color: var(--accent-primary); background: rgba(99, 102, 241, 0.1); box-shadow: 0 0 20px rgba(99, 102, 241, 0.1); }
+        .prompt-item .title { font-weight: 700; font-size: 0.95em; color: var(--text-primary); margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
+        .prompt-item .desc { font-size: 0.75em; color: var(--text-secondary); line-height: 1.4; }
 
         /* Editor Card */
-        .card { 
+        .editor-card { 
             background: var(--bg-card); 
             border: 1px solid var(--border-color); 
             border-radius: 16px; 
             padding: 24px; 
             box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+            min-height: 700px;
         }
         
+        .editor-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--border-color); }
+        .editor-title h2 { font-size: 1.2em; font-weight: 700; }
+        .editor-title p { color: var(--text-secondary); font-size: 0.85em; margin-top: 4px; }
+
         .editor-container {
+            flex-grow: 1;
             position: relative;
-            margin-top: 16px;
             border-radius: 12px;
             overflow: hidden;
             border: 1px solid var(--border-color);
+            margin-bottom: 24px;
         }
 
         .prompt-textarea {
             width: 100%;
-            height: 600px;
+            height: 100%;
+            min-height: 500px;
             background: var(--bg-input);
             color: #E2E8F0;
             padding: 24px;
@@ -77,7 +96,7 @@
             line-height: 1.6;
             border: none;
             outline: none;
-            resize: vertical;
+            resize: none;
             white-space: pre-wrap;
         }
 
@@ -85,7 +104,6 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-top: 24px;
             padding-top: 24px;
             border-top: 1px solid var(--border-color);
         }
@@ -171,32 +189,34 @@
         <div class="nav-links">
             <a href="/" class="nav-link">Dashboard</a>
             <a href="/automation" class="nav-link">Automation</a>
-            <a href="/system_prompt" class="nav-link active">System Prompt</a>
+            <a href="/system_prompt" class="nav-link active">System Prompts</a>
         </div>
     </nav>
 
     <main class="container">
         
-        <div class="page-header">
-            <div class="page-title">
-                <h2>AI System Prompt</h2>
-                <p>Configure the "brain" behind the product analysis. Changes are applied instantly.</p>
-            </div>
-            <div class="status-info" id="lastUpdated">
-                <!-- Injected via JS -->
-            </div>
-        </div>
+        <aside class="sidebar" id="promptSidebar">
+            <!-- Prompts list will be injected here -->
+        </aside>
 
-        <div class="card">
+        <div class="editor-card">
+            <div class="editor-header">
+                <div class="editor-title">
+                    <h2 id="activePromptTitle">Select a Prompt</h2>
+                    <p id="activePromptDesc">Choose an AI module to configure its behavior.</p>
+                </div>
+                <div class="status-info" id="lastUpdated"></div>
+            </div>
+
             <div class="editor-container">
-                <textarea id="promptEditor" class="prompt-textarea" placeholder="Paste your system prompt here..." spellcheck="false"></textarea>
+                <textarea id="promptEditor" class="prompt-textarea" placeholder="Select a prompt to start editing..." spellcheck="false" disabled></textarea>
             </div>
 
             <div class="editor-footer">
-                <button class="btn-secondary" onclick="resetToHardcoded()">Reset to Default</button>
-                <button class="btn-save" id="saveBtn" onclick="savePrompt()">
+                <button class="btn-secondary" onclick="revertChanges()">Revert Changes</button>
+                <button class="btn-save" id="saveBtn" onclick="savePrompt()" disabled>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-                    Save System Prompt
+                    Save Changes
                 </button>
             </div>
         </div>
@@ -206,25 +226,79 @@
     <div id="toast" class="toast"></div>
 
     <script>
+        let allPrompts = [];
+        let activePromptId = null;
+        let originalPromptValue = "";
+
+        const sidebar = document.getElementById('promptSidebar');
         const editor = document.getElementById('promptEditor');
         const saveBtn = document.getElementById('saveBtn');
-        let originalPrompt = "";
+        const titleEl = document.getElementById('activePromptTitle');
+        const descEl = document.getElementById('activePromptDesc');
 
-        async function loadPrompt() {
+        async function loadAllPrompts() {
             try {
-                const resp = await fetch('/api/system_prompt');
-                const data = await resp.json();
-                editor.value = data.system_prompt;
-                originalPrompt = data.system_prompt;
+                const resp = await fetch('/api/prompts');
+                allPrompts = await resp.json();
+                renderSidebar();
                 
-                // Set initial status
-                document.getElementById('lastUpdated').innerHTML = `
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                    Synced with database
-                `;
+                // Select first prompt by default if none selected
+                if (allPrompts.length > 0 && !activePromptId) {
+                    selectPrompt(allPrompts[0].id);
+                }
             } catch (e) {
-                showToast("Error loading prompt");
+                showToast("Error loading prompts");
             }
+        }
+
+        function renderSidebar() {
+            sidebar.innerHTML = allPrompts.map(p => `
+                <div class="prompt-item ${p.id === activePromptId ? 'active' : ''}" onclick="selectPrompt('${p.id}')">
+                    <div class="title">
+                        ${getIconForPrompt(p.id)}
+                        ${formatTitle(p.id)}
+                    </div>
+                    <div class="desc">${p.description}</div>
+                </div>
+            `).join('');
+        }
+
+        function formatTitle(id) {
+            return id.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+        }
+
+        function getIconForPrompt(id) {
+            if (id.includes('analysis')) return '🧠';
+            if (id.includes('plan')) return '📋';
+            if (id.includes('reconstruction')) return '🏗️';
+            return '⚙️';
+        }
+
+        function selectPrompt(id) {
+            if (activePromptId === id) return;
+            
+            // Check for unsaved changes
+            if (activePromptId && editor.value !== originalPromptValue) {
+                if (!confirm("You have unsaved changes. Discard them?")) return;
+            }
+
+            activePromptId = id;
+            const p = allPrompts.find(x => x.id === id);
+            
+            editor.value = p.prompt;
+            originalPromptValue = p.prompt;
+            editor.disabled = false;
+            saveBtn.disabled = false;
+            
+            titleEl.textContent = formatTitle(id);
+            descEl.textContent = p.description;
+            
+            document.getElementById('lastUpdated').innerHTML = `
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                Synced
+            `;
+
+            renderSidebar();
         }
 
         async function savePrompt() {
@@ -239,21 +313,26 @@
             saveBtn.disabled = true;
 
             try {
-                const resp = await fetch('/api/system_prompt', {
+                const resp = await fetch(`/api/prompts/${activePromptId}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ system_prompt: newPrompt })
+                    body: JSON.stringify({ prompt: newPrompt })
                 });
                 const result = await resp.json();
                 if (result.success) {
-                    showToast("System prompt updated successfully!");
-                    originalPrompt = newPrompt;
+                    showToast("Prompt updated successfully!");
+                    originalPromptValue = newPrompt;
+                    
+                    // Update local data
+                    const p = allPrompts.find(x => x.id === activePromptId);
+                    if (p) p.prompt = newPrompt;
+
                     document.getElementById('lastUpdated').innerHTML = `
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
                         Last saved: ${new Date().toLocaleTimeString()}
                     `;
                 } else {
-                    showToast("Error: " + (result.error || "Unknown error"));
+                    showToast("Error saving prompt");
                 }
             } catch (e) {
                 showToast("Connection error");
@@ -263,9 +342,9 @@
             }
         }
 
-        function resetToHardcoded() {
-            if (confirm("This will overwrite your current draft. Continue?")) {
-                loadPrompt();
+        function revertChanges() {
+            if (confirm("Revert all changes to this prompt?")) {
+                editor.value = originalPromptValue;
             }
         }
 
@@ -276,14 +355,13 @@
             setTimeout(() => { toast.style.display = 'none'; }, 3000);
         }
 
-        // Handle unsaved changes warning
         window.onbeforeunload = function() {
-            if (editor.value !== originalPrompt) {
-                return "You have unsaved changes. Are you sure you want to leave?";
+            if (activePromptId && editor.value !== originalPromptValue) {
+                return "You have unsaved changes.";
             }
         };
 
-        window.onload = loadPrompt;
+        window.onload = loadAllPrompts;
     </script>
 </body>
 </html>
