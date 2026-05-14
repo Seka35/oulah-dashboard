@@ -1,26 +1,59 @@
 version: '3.8'
 
 services:
-  app:
+  # 1. Main Dashboard + Automation Worker (in-thread)
+  main-app:
     build: .
-    container_name: ad_intelligence
+    container_name: ad_intel_main
     restart: unless-stopped
     ports:
       - "5000:5000"
-    environment:
-      - DATABASE_URL=${DATABASE_URL}
-      - APIFY_KEY=${APIFY_KEY}
-      - MINIMAX_API_KEY=${MINIMAX_API_KEY}
-      - R2_ACCOUNT_ID=${R2_ACCOUNT_ID}
-      - R2_ACCESS_KEY_ID=${R2_ACCESS_KEY_ID}
-      - R2_SECRET_ACCESS_KEY=${R2_SECRET_ACCESS_KEY}
-      - R2_BUCKET_NAME=${R2_BUCKET_NAME}
-      - R2_PUBLIC_URL=${R2_PUBLIC_URL}
+    env_file: .env
     volumes:
       - ./static:/app/static
       - ./logs:/app/logs
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000')"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:5000/"]
       interval: 30s
       timeout: 10s
       retries: 3
+
+  # 2. Scraper Worker (Media/Landing Pages)
+  scraper-worker:
+    build: .
+    container_name: ad_intel_scraper
+    restart: unless-stopped
+    command: ["python", "media_worker.py"]
+    env_file: .env
+    volumes:
+      - ./static:/app/static
+      - ./logs:/app/logs
+
+  # 3. Media Buying Dashboard
+  media-buying-app:
+    build: .
+    container_name: ad_intel_media_buying
+    restart: unless-stopped
+    working_dir: /app/media_buy_systeme
+    command: ["python", "run.py"]
+    ports:
+      - "5001:5001"
+    env_file: .env
+    environment:
+      - PORT=5001
+      - PYTHONPATH=/app/media_buy_systeme
+    volumes:
+      - ./logs:/app/logs
+
+  # 4. Media Buying Ads Worker
+  media-buying-worker:
+    build: .
+    container_name: ad_intel_media_worker
+    restart: unless-stopped
+    working_dir: /app/media_buy_systeme
+    command: ["python", "worker.py"]
+    env_file: .env
+    environment:
+      - PYTHONPATH=/app/media_buy_systeme
+    volumes:
+      - ./logs:/app/logs

@@ -8,3 +8,5 @@ playwright==1.40.0
 beautifulsoup4==4.12.2
 lxml==4.9.3
 openai>=1.0.0
+gunicorn==21.2.0
+PyYAML==6.0.1
