@@ -298,6 +298,11 @@
         
         .copy-box { background: var(--bg-input); padding: 24px; border-radius: 12px; border: 1px solid var(--border-color); }
         .copy-box .copy-title { font-size: 1.1em; font-weight: 600; margin-bottom: 12px; color: var(--text-primary); }
+        
+        .info-table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+        .info-table th { text-align: left; padding: 8px; font-size: 0.8em; color: var(--text-secondary); border-bottom: 1px solid var(--border-color); }
+        .info-table td { padding: 8px; font-size: 0.9em; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .info-table tr:last-child td { border-bottom: none; }
         .copy-box .copy-body { margin-bottom: 16px; line-height: 1.6; color: #CBD5E1; font-size: 0.95em; white-space: pre-wrap; }
         .copy-box .copy-cta { font-weight: 600; color: var(--text-primary); margin-bottom: 8px; }
         .copy-box a { color: var(--accent-primary); text-decoration: none; word-break: break-all; }
@@ -996,8 +1001,16 @@
                 } catch (e) { console.error("Failed to fetch analysis", e); }
             }
 
-            const raw = ad._raw || ad.raw_json || {};
+            const raw = ad.raw || ad._raw || ad.raw_json || {};
             const renderVal = (val) => (val !== undefined && val !== null && val !== '') ? val : '–';
+            
+            // Calculate Item URL once - handles all platforms
+            const itemUrl = ad.link_url || 
+                           (ad.raw && ad.raw['Ad Detail URL']) || 
+                           (ad.raw && ad.raw.ad_library_url) || 
+                           (ad._raw && ad._raw.link_url) || 
+                           ad.url || 
+                           '';
 
             let mainMediaHtml = '';
             let galleryHtml = '';
@@ -1022,11 +1035,6 @@
                 mainMediaHtml = `
                     <div class="modal-media-wrapper">
                         <img src="${ad.image || ad.thumbnail || ad.image_url || ad.imageUrl}" alt="Product Image">
-                    </div>`;
-            } else if (ad.image_url || ad.imageUrl) {
-                mainMediaHtml = `
-                    <div class="modal-media-wrapper">
-                        <img src="${ad.image_url || ad.imageUrl}" alt="Product Image">
                     </div>`;
             } else {
                 mainMediaHtml = `<div class="modal-media-wrapper" style="height:300px; display:flex; align-items:center; justify-content:center; color:#4B5563;">No Media Available</div>`;
@@ -1089,10 +1097,10 @@
                         </div>
 
                         ${ai.warnings && ai.warnings.length > 0 ? `
-                        <div class="ai-item" style="margin-top:16px; border-color:var(--danger);">
+                        <div class="ai-item" style="margin-top:16px; border-color:var(--danger); background: rgba(239, 68, 68, 0.05);">
                             <div class="label" style="color:var(--danger);">Warnings</div>
                             <div class="content">
-                                <ul style="padding-left:20px;">
+                                <ul style="padding-left:20px; color: #FDA4AF;">
                                     ${ai.warnings.map(w => `<li>${w}</li>`).join('')}
                                 </ul>
                             </div>
@@ -1113,22 +1121,10 @@
                 `;
             }
 
-            let platformHtml = `
-                <div class="modal-media-col">
-                    <div class="info-title">Product Visuals</div>
-                    ${mainMediaHtml}
-                    ${galleryHtml}
-                    <div style="margin-top:16px;text-align:center;">
-                        <img src="${renderVal(ad.advertiser_avatar) !== '–' ? ad.advertiser_avatar : 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs='}" style="width:60px;height:60px;border-radius:50%;border:2px solid var(--border-color); background: var(--bg-card);">
-                        <div style="font-size:0.8em;color:var(--text-secondary);margin-top:4px;">${ad.brand || ad.advertiser_name || 'Brand Profile'}</div>
-                    </div>
-                </div>
-            `;
+            let platformInfoHtml = '';
 
             if (platform === 'facebook') {
                 const eu = raw.transparency_by_location?.eu_transparency || raw.aaa_info || {};
-                const adv = raw.advertiser || {};
-                const pageInfo = adv.ad_library_page_info?.page_info || adv.page?.page_info || {};
                 const breakdowns = raw.age_country_gender_reach_breakdown || eu.age_country_gender_reach_breakdown || [];
                 
                 let demoRows = '';
@@ -1138,19 +1134,20 @@
                             <td>${renderVal(b.age_range)}</td>
                             <td style="text-align:center;">${renderVal(b.male)}</td>
                             <td style="text-align:center;">${renderVal(b.female)}</td>
-                            <td style="text-align:center;color:var(--cyan);">${renderVal((b.male || 0) + (b.female || 0))}</td>
+                            <td style="text-align:center;color:var(--cyan);font-weight:700;">${renderVal((b.male || 0) + (b.female || 0))}</td>
                         </tr>`;
                     });
                 }
 
-                platformHtml += `
+                platformInfoHtml = `
                     <div class="info-section">
                         <div class="info-title">Campaign Info</div>
                         <div class="info-grid">
+                            ${itemUrl ? `
                             <div class="info-item" style="grid-column: span 2;">
-                                <div class="lbl">Original Ad URL</div>
-                                <div class="val"><a href="${ad.link_url}" target="_blank" style="color:var(--cyan); text-decoration:none; word-break:break-all;">${ad.link_url}</a></div>
-                            </div>
+                                <div class="lbl">Original Landing Page</div>
+                                <div class="val"><a href="${itemUrl}" target="_blank" style="color:var(--cyan); text-decoration:none; word-break:break-all;">${itemUrl}</a></div>
+                            </div>` : ''}
                             <div class="info-item"><div class="lbl">Archive ID</div><div class="val">${renderVal(raw.ad_archive_id)}</div></div>
                             <div class="info-item"><div class="lbl">Status</div><div class="val" style="color: ${raw.is_active ? 'var(--success)' : 'inherit'}">${raw.is_active ? '● Active' : '○ Inactive'}</div></div>
                             <div class="info-item"><div class="lbl">Start Date</div><div class="val">${renderVal(raw.start_date_formatted)}</div></div>
@@ -1159,36 +1156,50 @@
                             <div class="info-item"><div class="lbl">Ads Count</div><div class="val">${renderVal(raw.ads_count)}</div></div>
                         </div>
                     </div>
-                    <div class="info-section">
-                        <div class="info-title">Demographics (EU)</div>
-                        ${demoRows ? `<table style="width:100%; border-collapse:collapse;"><thead><tr style="color:var(--text-secondary);font-size:0.8em;"><th>Age</th><th>Male</th><th>Female</th><th>Total</th></tr></thead><tbody>${demoRows}</tbody></table>` : '<div style="color:var(--text-secondary);">No breakdown available</div>'}
-                    </div>
-                    <div class="info-section">
-                        <div class="info-title">Library Link</div>
-                        <a href="${renderVal(raw.ad_library_url)}" target="_blank" style="color:var(--accent-primary);word-break:break-all;font-size:0.9em;">View in Ad Library</a>
-                    </div>
-                    <div class="info-section" id="landing-page-section">
-                        <div class="info-title">🖥️ Landing Page</div>
-                        <div id="landing-page-content">Loading...</div>
+                    <div class="info-grid" style="grid-template-columns: 1.2fr 0.8fr; gap: 24px;">
+                        <div class="info-section">
+                            <div class="info-title">Demographics (EU)</div>
+                            <div class="info-item" style="padding:0; overflow:hidden;">
+                                <table class="info-table">
+                                    <thead>
+                                        <tr><th>Age</th><th style="text-align:center;">Male</th><th style="text-align:center;">Female</th><th style="text-align:center;">Total</th></tr>
+                                    </thead>
+                                    <tbody>${demoRows || '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text-secondary);">No data</td></tr>'}</tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="info-section">
+                            <div class="info-title">Links & Resources</div>
+                            <div class="info-item" style="margin-bottom:12px;">
+                                <div class="lbl">Platform Source</div>
+                                <div class="val"><a href="${renderVal(raw.ad_library_url)}" target="_blank" style="color:var(--accent-primary); font-size:0.85em; text-decoration:none;">🔗 View in Ad Library</a></div>
+                            </div>
+                            <div class="info-item" id="landing-page-section">
+                                <div class="lbl">🖥️ Scraped Landing Page</div>
+                                <div id="landing-page-content" class="val" style="font-size:0.85em; color:var(--text-secondary);">Loading...</div>
+                            </div>
+                        </div>
                     </div>
                     <div class="info-section" id="advertiser-ads-section" style="display:none;">
                         <div class="info-title">📊 Advertiser's Other Ads</div>
-                        <div id="advertiser-ads-loading" style="color:var(--text-secondary);font-size:0.85em;">Loading...</div>
-                        <div id="advertiser-ads-list" style="max-height:300px;overflow-y:auto;"></div>
+                        <div class="info-item">
+                            <div id="advertiser-ads-loading" style="color:var(--text-secondary);font-size:0.85em;margin-bottom:10px;">Loading...</div>
+                            <div id="advertiser-ads-list" style="max-height:400px;overflow-y:auto; display:grid; grid-template-columns:repeat(auto-fill, minmax(120px, 1fr)); gap:12px;"></div>
+                        </div>
                     </div>
                 `;
             } else if (platform === 'tiktok') {
-                const targetRegions = raw['Ad Targeting']?.regions || [];
                 const detailsMap = (raw['Ad Details'] || []).reduce((acc, curr) => ({...acc, ...curr}), {});
 
-                platformHtml += `
+                platformInfoHtml = `
                     <div class="info-section">
                         <div class="info-title">Campaign Info</div>
                         <div class="info-grid">
+                            ${itemUrl ? `
                             <div class="info-item" style="grid-column: span 2;">
-                                <div class="lbl">Original Ad URL</div>
-                                <div class="val"><a href="${ad.link_url}" target="_blank" style="color:var(--cyan); text-decoration:none; word-break:break-all;">${ad.link_url}</a></div>
-                            </div>
+                                <div class="lbl">Original Landing Page</div>
+                                <div class="val"><a href="${itemUrl}" target="_blank" style="color:var(--cyan); text-decoration:none; word-break:break-all;">${itemUrl}</a></div>
+                            </div>` : ''}
                             <div class="info-item"><div class="lbl">Ad ID</div><div class="val">${renderVal(raw['AD ID'])}</div></div>
                             <div class="info-item"><div class="lbl">First Shown</div><div class="val">${renderVal(raw['Ad Dates']?.[0]?.FirstShown)}</div></div>
                             <div class="info-item"><div class="lbl">Impression</div><div class="val">${renderVal(detailsMap['Impression'])}</div></div>
@@ -1196,42 +1207,54 @@
                         </div>
                     </div>
                     <div class="info-section">
-                        <div class="info-title">Library Link</div>
-                        <a href="${renderVal(raw['Ad Detail URL'])}" target="_blank" style="color:var(--accent-primary);word-break:break-all;font-size:0.9em;">View in TikTok Library</a>
+                        <div class="info-title">Links & Resources</div>
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <div class="lbl">Platform Source</div>
+                                <div class="val"><a href="${renderVal(raw['Ad Detail URL'])}" target="_blank" style="color:var(--accent-primary); font-size:0.85em; text-decoration:none;">🔗 View in TikTok Library</a></div>
+                            </div>
+                            <div class="info-item" id="landing-page-section">
+                                <div class="lbl">🖥️ Scraped Landing Page</div>
+                                <div id="landing-page-content" class="val" style="font-size:0.85em; color:var(--text-secondary);">Loading...</div>
+                            </div>
+                        </div>
                     </div>
                 `;
             } else if (platform === 'amazon' || platform === 'etsy') {
-                platformHtml += `
+                platformInfoHtml = `
                     <div class="info-section">
                         <div class="info-title">Marketplace Info</div>
                         <div class="info-grid">
+                            <div class="info-item" style="grid-column: span 2;">
+                                <div class="lbl">Original Product Page</div>
+                                <div class="val"><a href="${itemUrl}" target="_blank" style="color:var(--cyan); text-decoration:none; word-break:break-all;">${itemUrl}</a></div>
+                            </div>
                             <div class="info-item"><div class="lbl">Title</div><div class="val">${renderVal(ad.title)}</div></div>
                             <div class="info-item"><div class="lbl">Price</div><div class="val" style="color:var(--success);">${renderVal(ad.price)}</div></div>
                             <div class="info-item"><div class="lbl">Reviews</div><div class="val">${renderVal(ad.review_count || ad.reviews_count || ad.reviews)}</div></div>
                             <div class="info-item"><div class="lbl">Rating</div><div class="val">${renderVal(ad.stars || ad.rating)} ⭐</div></div>
                         </div>
                     </div>
-                    <div class="info-section">
-                        <div class="info-title">Store Link</div>
-                        <a href="${renderVal(ad.url || ad.link)}" target="_blank" style="color:var(--accent-primary);word-break:break-all;font-size:0.9em;">View Product Page</a>
-                    </div>
                 `;
             }
 
-            // Add original URL to the Info section if it exists
-            const itemUrl = ad.link_url || ad.url || (ad.raw && ad.raw['Ad Detail URL']) || (ad._raw && ad._raw.link_url);
-            if (itemUrl && !platformHtml.includes('Original Ad URL') && !platformHtml.includes('Original Product URL')) {
-                // Insert it into the first info-grid found
-                const urlLabel = (platform === 'amazon' || platform === 'etsy') ? 'Original Product URL' : 'Original Ad URL';
-                const urlHtml = `
-                    <div class="info-item" style="grid-column: span 2;">
-                        <div class="lbl">${urlLabel}</div>
-                        <div class="val"><a href="${itemUrl}" target="_blank" style="color:var(--cyan); text-decoration:none; word-break:break-all;">${itemUrl}</a></div>
-                    </div>`;
-                platformHtml = platformHtml.replace('<div class="info-grid">', `<div class="info-grid">${urlHtml}`);
-            }
-
-            document.getElementById('modal_body').innerHTML = aiHtml + platformHtml;
+            document.getElementById('modal_body').innerHTML = `
+                <div class="modal-media-col">
+                    <div class="info-title">Product Visuals</div>
+                    ${mainMediaHtml}
+                    ${galleryHtml}
+                    <div style="margin-top:24px; padding-top:24px; border-top:1px solid var(--border-color); text-align:center;">
+                        <img src="${renderVal(ad.advertiser_avatar) !== '–' ? ad.advertiser_avatar : 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs='}" style="width:64px;height:64px;border-radius:50%;border:2px solid var(--border-color); background: var(--bg-card); object-fit:cover;">
+                        <div style="font-size:0.9em; font-weight:700; color:var(--text-primary); margin-top:8px;">${ad.brand || ad.advertiser_name || 'Brand Profile'}</div>
+                        <div style="font-size:0.75em; color:var(--text-secondary); margin-top:2px;">Advertiser / Brand</div>
+                    </div>
+                </div>
+                <div class="modal-info-col">
+                    ${aiHtml}
+                    ${platformInfoHtml}
+                </div>
+            `;
+            
             document.getElementById('modal').classList.add('show');
 
             // Fetch advertiser's other ads for Facebook
@@ -1241,10 +1264,8 @@
 
             // Fetch landing page info for all ads/products
             const displayId = (platform === 'amazon' ? ad.asin : (platform === 'etsy' ? ad.listing_id : (ad.ad_archive_id || ad.id)));
-            const sourceUrl = ad.link_url || ad.url || (ad.raw && ad.raw['Ad Detail URL']) || (ad._raw && ad._raw.link_url);
-            
             if (displayId) {
-                loadLandingPageInfo(displayId, sourceUrl);
+                loadLandingPageInfo(displayId, itemUrl);
             }
         }
 
